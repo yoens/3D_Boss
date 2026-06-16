@@ -1,4 +1,6 @@
 using UnityEngine;
+using UnityEngine.InputSystem;
+
 public class PlayerController : MonoBehaviour
 {
     private CharacterController controller;
@@ -11,6 +13,9 @@ public class PlayerController : MonoBehaviour
     [SerializeField]
     private float rotationSpeed = 12f;
     private float verticalVelocity;
+
+    private bool isAttacking;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -20,10 +25,12 @@ public class PlayerController : MonoBehaviour
     private void OnEnable()
     {
         inputActions.Enable();
+        inputActions.Player.Attack.performed += OnAttack;
     }
     private void OnDisable()
     {
         inputActions.Disable();
+        inputActions.Player.Attack.performed -= OnAttack;
     }
     private void Update()
     {
@@ -78,5 +85,20 @@ public class PlayerController : MonoBehaviour
         Vector3 motion = moveDir * moveSpeed;
         motion.y = verticalVelocity;
         controller.Move(motion * Time.deltaTime);
+    }
+    private void OnAttack(UnityEngine.InputSystem.InputAction.CallbackContext context)
+    {
+        if (isAttacking)
+        {
+            return;
+        }
+
+        isAttacking = true;
+        Debug.Log("Attack");
+        Invoke(nameof(EndAttack), 0.5f);
+    }
+    private void EndAttack()
+    {
+        isAttacking = false;
     }
 }
