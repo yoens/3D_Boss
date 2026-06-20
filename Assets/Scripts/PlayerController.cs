@@ -6,13 +6,16 @@ public class PlayerController : MonoBehaviour
     private CharacterController controller;
     private PlayerInputActions inputActions;
     private Camera mainCam;
-    [SerializeField]
-    private float moveSpeed = 5f;
-    [SerializeField]
-    private float gravity = -20f;
-    [SerializeField]
-    private float rotationSpeed = 12f;
+    [SerializeField] private float moveSpeed = 5f;
+    [SerializeField] private float gravity = -20f;
+    [SerializeField] private LayerMask groundLayer;
+    [SerializeField] private float rotationSpeed = 12f;
     private float verticalVelocity;
+
+    [SerializeField] private Transform attackPoint;
+    [SerializeField] private float attackRadius = 1.2f;
+    [SerializeField] private LayerMask enemyLayer;
+    [SerializeField] private float attackDuration = 0.5f;
 
     private bool isAttacking;
 
@@ -29,8 +32,8 @@ public class PlayerController : MonoBehaviour
     }
     private void OnDisable()
     {
-        inputActions.Disable();
         inputActions.Player.Attack.performed -= OnAttack;
+        inputActions.Disable();
     }
     private void Update()
     {
@@ -50,12 +53,8 @@ public class PlayerController : MonoBehaviour
             moveDir.Normalize();
         }
 
-
-        float forwardInput = Mathf.Max(0f, moveInput.y); 
-        Vector3 faceDir = camForward * forwardInput + camRight * moveInput.x;
-
         HandleGravity();
-        HandleRotation(faceDir);
+        HandleMouseRotation();
         Move(moveDir);
     }
 
@@ -67,18 +66,27 @@ public class PlayerController : MonoBehaviour
         }
         verticalVelocity += gravity * Time.deltaTime;
     }
-    private void HandleRotation(Vector3 faceDir)
+    private void HandleMouseRotation()
     {
-        if (faceDir.sqrMagnitude < 0.01f)
+        Ray ray = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
+        if (Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
         {
-            return;
+            Vector3 lookDir = hit.point - transform.position;
+            lookDir.y = 0f;
+
+            if (lookDir.sqrMagnitude < 0.01f)
+            {
+                return;
+            }
+
+            Quaternion targetRotation = Quaternion.LookRotation(lookDir);
+
+            transform.rotation = Quaternion.Slerp(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * Time.deltaTime
+            );
         }
-        Quaternion targetRotation = Quaternion.LookRotation(faceDir);
-        transform.rotation = Quaternion.Slerp(
-            transform.rotation,
-            targetRotation,
-            rotationSpeed * Time.deltaTime
-        );
     }
     private void Move(Vector3 moveDir)
     {
@@ -95,10 +103,31 @@ public class PlayerController : MonoBehaviour
 
         isAttacking = true;
         Debug.Log("Attack");
-        Invoke(nameof(EndAttack), 0.5f);
+        CheckAttackHit();
+        Invoke(nameof(EndAttack), attackDuration);
     }
     private void EndAttack()
     {
         isAttacking = false;
+    }
+
+    private void CheckAttackHit()
+    {
+        Collider[] hits = Physics.OverlapSphere(
+            attackPoint.position,
+            attackRadius,
+            enemyLayer
+        );
+
+        foreach (Collider hit in hits)
+        {
+            Debug.Log("Hit : " + hit.name);
+        }
+    }
+    private void OnDrawGizmosSelected()
+    {
+        if (attackPoint == null) return;
+
+        Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
     }
 }
