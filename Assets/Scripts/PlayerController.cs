@@ -19,6 +19,18 @@ public class PlayerController : MonoBehaviour
 
     private bool isAttacking;
 
+    [SerializeField] private float dodgeSpeed = 12f;
+    [SerializeField] private float dodgeDuration = 0.25f;
+    [SerializeField] private float dodgeCooldown = 1f;
+
+    private bool isDodging;
+    private bool canDodge = true;
+    private Vector3 dodgeDir;
+    private float dodgeTimer;
+    private bool isInvincible;
+
+    private Vector3 currentMoveDir;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
@@ -29,10 +41,12 @@ public class PlayerController : MonoBehaviour
     {
         inputActions.Enable();
         inputActions.Player.Attack.performed += OnAttack;
+        inputActions.Player.Dodge.performed += OnDodge;
     }
     private void OnDisable()
     {
         inputActions.Player.Attack.performed -= OnAttack;
+        inputActions.Player.Dodge.performed -= OnDodge;
         inputActions.Disable();
     }
     private void Update()
@@ -52,10 +66,21 @@ public class PlayerController : MonoBehaviour
         {
             moveDir.Normalize();
         }
-
+        currentMoveDir = moveDir;
         HandleGravity();
-        HandleMouseRotation();
-        Move(moveDir);
+        if(!isDodging)
+        {
+            HandleMouseRotation();
+        }
+        if(isDodging)
+        {
+            HandleDodge();
+        }
+        else
+        {
+            Move(moveDir);
+        }
+        
     }
 
     private void HandleGravity()
@@ -96,7 +121,7 @@ public class PlayerController : MonoBehaviour
     }
     private void OnAttack(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
-        if (isAttacking)
+        if (isAttacking || isDodging)
         {
             return;
         }
@@ -129,5 +154,52 @@ public class PlayerController : MonoBehaviour
         if (attackPoint == null) return;
 
         Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
+    }
+
+    private void OnDodge(InputAction.CallbackContext context)
+    {
+        if(isDodging || !canDodge || isAttacking)
+        {
+            return;
+        }
+        isDodging = true;
+        canDodge = false;
+        isInvincible = true;
+        dodgeTimer = dodgeDuration;
+        if(currentMoveDir.sqrMagnitude > 0.01f)
+        {
+            dodgeDir = currentMoveDir;
+        }
+        else
+        {
+            dodgeDir = transform.forward;
+        }
+
+    }
+
+    private void HandleDodge()
+    {
+        dodgeTimer -= Time.deltaTime;
+
+        Vector3 motion = dodgeDir * dodgeSpeed;
+        motion.y = verticalVelocity;
+
+        controller.Move(motion * Time.deltaTime);
+
+        if(dodgeTimer <= 0f)
+        {
+            EndDodge();
+        }
+    }
+
+    private void EndDodge()
+    {
+        isDodging = false;
+        isInvincible = false;
+        Invoke(nameof(ResetDodge), dodgeCooldown);
+    }
+    private void ResetDodge()
+    {
+        canDodge = true;
     }
 }
