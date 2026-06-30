@@ -146,7 +146,10 @@ public class PlayerController : MonoBehaviour
 
         foreach (Collider hit in hits)
         {
-            Debug.Log("Hit : " + hit.name);
+            if(hit.TryGetComponent<IDamageable>(out var target))
+            {
+                target.TakeDamage(10);
+            }
         }
     }
     private void OnDrawGizmosSelected()
