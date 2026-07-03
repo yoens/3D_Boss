@@ -390,7 +390,7 @@ MonoBehaviour:
   groundLayer:
     serializedVersion: 2
     m_Bits: 128
-  rotationSpeed: 6
+  rotationSpeed: 2
   attackPoint: {fileID: 809006712}
   attackRadius: 1.2
   enemyLayer:
@@ -719,6 +719,7 @@ GameObject:
   - component: {fileID: 2059794882}
   - component: {fileID: 2059794881}
   - component: {fileID: 2059794885}
+  - component: {fileID: 2059794886}
   m_Layer: 6
   m_Name: Enemy_cube
   m_TagString: Untagged
@@ -825,6 +826,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   hp: 30
+--- !u!114 &2059794886
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2059794880}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 04b7c4766ee967ec0a9ffcb0cd8c4eb9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  player: {fileID: 846435899}
+  moveSpeed: 3
+  rotationSpeed: 10
+  detectRange: 8
+  attackRange: 2
+  hp: 100
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
