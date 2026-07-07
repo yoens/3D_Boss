@@ -20,7 +20,7 @@ public class EnemyController : MonoBehaviour
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
-    public float RotaTionSpeed => rotationSpeed;
+    public float RotationSpeed => rotationSpeed;
     public float DetectRange => detectRange;
     public float AttackRange => attackRange;
     public int Hp => hp;
@@ -47,12 +47,6 @@ public class EnemyController : MonoBehaviour
 
     private void Update()
     {
-        if(hp <=0)
-        {
-            stateMachine.ChangeState(deadState);
-            return;
-        }
-
         stateMachine.Update();
     }
 
@@ -63,21 +57,54 @@ public class EnemyController : MonoBehaviour
 
     public void MoveToPlayer()
     {
+        Vector3 direction = player.position - transform.position;
+        direction.y = 0f;
+        if (direction.sqrMagnitude < 0.01f)
+        {
+            return;
+        }
 
+        direction.Normalize();
+
+        transform.position += direction * moveSpeed * Time.deltaTime;
+        
     }
 
     public void LookAtPlayer()
     {
+        Vector3 direction = player.position - transform.position;
+        direction.y = 0f;
 
+        if (direction.sqrMagnitude < 0.01f)
+        {
+            return;
+        }
+
+        Quaternion targetRotation = Quaternion.LookRotation(direction);
+
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation,
+            targetRotation,
+            rotationSpeed * Time.deltaTime
+        );
     }
 
     public void Attack()
     {
-
+        if(player.TryGetComponent<IDamageable>(out var target))
+        {
+            target.TakeDamage(10);
+        }
     }
 
     public void TakeDamage(int damage)
     {
+        if(stateMachine.CurrentState == deadState)
+            return;
         hp -= damage;
+        if(hp <= 0)
+        {
+            stateMachine.ChangeState(deadState);
+        }
     }
 }

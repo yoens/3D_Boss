@@ -1,7 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 
-public class PlayerController : MonoBehaviour
+public class PlayerController : MonoBehaviour, IDamageable
 {
     private CharacterController controller;
     private PlayerInputActions inputActions;
@@ -22,6 +22,8 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private float dodgeSpeed = 12f;
     [SerializeField] private float dodgeDuration = 0.25f;
     [SerializeField] private float dodgeCooldown = 1f;
+
+    [SerializeField] private int hp = 100;
 
     private bool isDodging;
     private bool canDodge = true;
@@ -204,5 +206,20 @@ public class PlayerController : MonoBehaviour
     private void ResetDodge()
     {
         canDodge = true;
+    }
+
+    public void TakeDamage(int amount)
+    {
+        if(isInvincible)
+        {
+            Debug.Log("회피 무적 - 데미지 무시");
+            return;
+        }
+        hp -= amount;
+        Debug.Log($"플레이어 피격  hp : {hp} ");
+        if(hp <= 0)
+        {
+            Debug.Log("플레이어 사망");
+        }
     }
 }
