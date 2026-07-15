@@ -33,10 +33,13 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private Vector3 currentMoveDir;
 
+    private Animator animator;
+
     private void Awake()
     {
         controller = GetComponent<CharacterController>();
         inputActions = new PlayerInputActions();
+        animator = GetComponentInChildren<Animator>();
         mainCam = Camera.main;
     }
     private void OnEnable()
@@ -62,7 +65,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         camForward.Normalize();
         camRight.Normalize();
 
-        
+        animator.SetFloat("Speed", currentMoveDir.magnitude);
+
         Vector3 moveDir = camForward * moveInput.y + camRight * moveInput.x;
         if (moveDir.sqrMagnitude > 1f)
         {
@@ -131,6 +135,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         isAttacking = true;
         Debug.Log("Attack");
         CheckAttackHit();
+        animator.SetTrigger("Attack");
         Invoke(nameof(EndAttack), attackDuration);
     }
     private void EndAttack()
@@ -171,6 +176,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         canDodge = false;
         isInvincible = true;
         dodgeTimer = dodgeDuration;
+        animator.SetTrigger("Dodge");
         if(currentMoveDir.sqrMagnitude > 0.01f)
         {
             dodgeDir = currentMoveDir;
@@ -216,6 +222,7 @@ public class PlayerController : MonoBehaviour, IDamageable
             return;
         }
         hp -= amount;
+        animator.SetTrigger("Hit");
         Debug.Log($"플레이어 피격  hp : {hp} ");
         if(hp <= 0)
         {

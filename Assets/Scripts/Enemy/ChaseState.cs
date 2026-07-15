@@ -11,7 +11,7 @@ public class ChaseState : IState
 
     public void Enter()
     {
-
+        enemy.Animator.SetFloat("Speed", 1f);
     }
 
     public void Update()

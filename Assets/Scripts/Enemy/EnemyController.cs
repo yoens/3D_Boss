@@ -1,7 +1,7 @@
 
 using UnityEngine;
 
-public class EnemyController : MonoBehaviour
+public class EnemyController : MonoBehaviour, IDamageable
 {
     private StateMachine stateMachine;
 
@@ -9,6 +9,7 @@ public class EnemyController : MonoBehaviour
     private ChaseState chaseState;
     private AttackState attackState;
     private DeadState deadState;
+    private HitState hitState;
 
     [SerializeField] private Transform player;
 
@@ -17,26 +18,33 @@ public class EnemyController : MonoBehaviour
     [SerializeField] private float detectRange = 8f;
     [SerializeField] private float attackRange = 2f;
     [SerializeField] private int hp = 100;
+    [SerializeField] private float hitDuration = 0.4f;
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
     public float RotationSpeed => rotationSpeed;
     public float DetectRange => detectRange;
     public float AttackRange => attackRange;
+    public float HitDuration => hitDuration;
+    public Animator Animator => animator;
     public int Hp => hp;
 
     public IdleState IdleState => idleState;
     public ChaseState ChaseState => chaseState;
     public AttackState AttackState => attackState;
+    public HitState HitState => hitState;
     public DeadState DeadState => deadState;
+
+    private Animator animator;
 
     private void Awake()
     {
         stateMachine = new StateMachine();
-
+        animator = GetComponentInChildren<Animator>();
         idleState = new IdleState(this, stateMachine);
         chaseState = new ChaseState(this, stateMachine);
         attackState = new AttackState(this, stateMachine);
+        hitState = new HitState(this, stateMachine);
         deadState = new DeadState(this, stateMachine);
     }
 
@@ -47,6 +55,7 @@ public class EnemyController : MonoBehaviour
 
     private void Update()
     {
+        
         stateMachine.Update();
     }
 
@@ -99,12 +108,19 @@ public class EnemyController : MonoBehaviour
 
     public void TakeDamage(int damage)
     {
-        if(stateMachine.CurrentState == deadState)
+        if (stateMachine.CurrentState == deadState)
+        {
             return;
+        }
+        Debug.Log($"{name} 피격! 남은 HP : {hp}");
         hp -= damage;
-        if(hp <= 0)
+
+        if (hp <= 0)
         {
             stateMachine.ChangeState(deadState);
+            return;
         }
+
+        stateMachine.ChangeState(hitState);
     }
 }

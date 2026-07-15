@@ -11,7 +11,7 @@ public class IdleState : IState
 
     public void Enter()
     {
-
+        enemy.Animator.SetFloat("Speed", 0f);
     }
 
     public void Update()

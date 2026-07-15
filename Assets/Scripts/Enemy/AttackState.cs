@@ -3,7 +3,7 @@ public class AttackState : IState
     private EnemyController enemy;
     private StateMachine stateMachine;
 
-    private float attackCooldown = 1.5f;
+    private float attackCooldown = 2f;
     private float attackTimer;
 
     public AttackState(EnemyController enemy, StateMachine stateMachine)
@@ -32,6 +32,7 @@ public class AttackState : IState
 
         if(attackTimer <= 0f)
         {
+            enemy.Animator.SetTrigger("Attack");
             enemy.Attack();
             attackTimer = attackCooldown;
         }
