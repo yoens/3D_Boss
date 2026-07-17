@@ -134,7 +134,6 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         isAttacking = true;
         Debug.Log("Attack");
-        CheckAttackHit();
         animator.SetTrigger("Attack");
         Invoke(nameof(EndAttack), attackDuration);
     }
@@ -143,7 +142,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         isAttacking = false;
     }
 
-    private void CheckAttackHit()
+    public void CheckAttackHit()
     {
         Collider[] hits = Physics.OverlapSphere(
             attackPoint.position,
