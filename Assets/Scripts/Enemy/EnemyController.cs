@@ -100,6 +100,8 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void Attack()
     {
+        if (GetDistanceToPlayer() > attackRange) return;
+
         if(player.TryGetComponent<IDamageable>(out var target))
         {
             target.TakeDamage(10);

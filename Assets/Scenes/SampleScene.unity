@@ -122,6 +122,11 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
+--- !u!1 &159609296 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 919132149155446097, guid: 3955de6a24970f840996fe77051507ee, type: 3}
+  m_PrefabInstance: {fileID: 1916524640}
+  m_PrefabAsset: {fileID: 0}
 --- !u!4 &321380772 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 97ada40f57d401540b8eafeeba1f0e9c, type: 3}
@@ -298,7 +303,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 10, y: 1, z: 10}
+  m_LocalScale: {x: 40, y: 1, z: 40}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -834,6 +839,18 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 3955de6a24970f840996fe77051507ee, type: 3}
   m_PrefabInstance: {fileID: 1916524640}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &1538976417
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 159609296}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1cdda93546a865c469868bcde2978f16, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!4 &1604129636 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -2189267025489947836, guid: 97ada40f57d401540b8eafeeba1f0e9c, type: 3}
@@ -905,7 +922,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: -2189267025489947836, guid: 3955de6a24970f840996fe77051507ee, type: 3}
       insertIndex: 0
       addedObject: {fileID: 408299465}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 3955de6a24970f840996fe77051507ee, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1538976417}
   m_SourcePrefab: {fileID: 100100000, guid: 3955de6a24970f840996fe77051507ee, type: 3}
 --- !u!1 &2059794880
 GameObject:
@@ -1008,7 +1028,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 1, z: 10}
-  m_LocalScale: {x: 2, y: 2, z: 1}
+  m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1538976415}
@@ -1030,7 +1050,7 @@ MonoBehaviour:
   moveSpeed: 2
   rotationSpeed: 10
   detectRange: 8
-  attackRange: 1.5
+  attackRange: 2
   hp: 100
   hitDuration: 0.4
 --- !u!4 &2116713043 stripped

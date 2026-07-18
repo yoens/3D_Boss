@@ -33,7 +33,7 @@ public class AttackState : IState
         if(attackTimer <= 0f)
         {
             enemy.Animator.SetTrigger("Attack");
-            enemy.Attack();
+            
             attackTimer = attackCooldown;
         }
     }
