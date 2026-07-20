@@ -73,6 +73,10 @@ public class PlayerController : MonoBehaviour, IDamageable
             moveDir.Normalize();
         }
         currentMoveDir = moveDir;
+        
+        Vector3 localMove = transform.InverseTransformDirection(moveDir);
+        animator.SetFloat("MoveX", localMove.x);
+        animator.SetFloat("MoveY", localMove.z);
         HandleGravity();
         if(!isDodging)
         {
