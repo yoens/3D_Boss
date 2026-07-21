@@ -5,7 +5,7 @@ public class AttackState : IState
     private EnemyController enemy;
     private StateMachine stateMachine;
 
-    private float attackCooldown = 2f;
+    private float attackCooldown = 1f;
     private float attackTimer;
 
     private bool isAttacking;
@@ -60,6 +60,7 @@ public class AttackState : IState
 
     public void FinishAttack()
     {
+        Debug.Log("FinishAttack 호출");
         isAttacking = false;
         isComboPlaying = false;
         attackTimer = attackCooldown;

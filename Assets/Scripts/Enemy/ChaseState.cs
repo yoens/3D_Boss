@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class ChaseState : IState
 {
     private EnemyController enemy;
@@ -11,6 +13,7 @@ public class ChaseState : IState
 
     public void Enter()
     {
+        Debug.Log("Chase Enter");
         enemy.Animator.SetFloat("Speed", 1f);
     }
 
@@ -35,6 +38,6 @@ public class ChaseState : IState
 
     public void Exit()
     {
-        
+        enemy.Animator.SetFloat("Speed", 0f);
     }
 }
