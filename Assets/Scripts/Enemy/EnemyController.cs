@@ -19,6 +19,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private float attackRange = 2f;
     [SerializeField] private int hp = 100;
     [SerializeField] private float hitDuration = 0.4f;
+    [SerializeField] private int[] comboDamages = { 5, 5, 15 };
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
@@ -124,5 +125,32 @@ public class EnemyController : MonoBehaviour, IDamageable
         }
 
         stateMachine.ChangeState(hitState);
+    }
+    public void ComboAttack(int index)
+    {
+        if (GetDistanceToPlayer() > attackRange)
+        {
+            return;
+        }
+
+        int arrayIndex = index - 1;
+
+        if (arrayIndex < 0 || arrayIndex >= comboDamages.Length)
+        {
+            Debug.LogWarning($"잘못된 콤보 인덱스: {index}");
+            return;
+        }
+
+        int damage = comboDamages[arrayIndex];
+
+        if (player.TryGetComponent<IDamageable>(out var target))
+        {
+            target.TakeDamage(damage);
+        }
+    }
+
+    public void FinishAttack()
+    {
+        attackState.FinishAttack();
     }
 }
