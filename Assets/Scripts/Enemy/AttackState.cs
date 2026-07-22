@@ -5,9 +5,6 @@ public class AttackState : IState
     private EnemyController enemy;
     private StateMachine stateMachine;
 
-    private float attackCooldown = 1f;
-    private float attackTimer;
-
     private bool isAttacking;
     private bool isComboPlaying;
 
@@ -19,13 +16,16 @@ public class AttackState : IState
 
     public void Enter()
     {
-        attackTimer = 0f;
         isAttacking = false;
         isComboPlaying = false;
     }
 
     public void Update()
     {
+        enemy.LookAtPlayer();
+
+        if (isAttacking) return;
+
         float distance = enemy.GetDistanceToPlayer();
 
         if (distance > enemy.AttackRange)
@@ -34,28 +34,15 @@ public class AttackState : IState
             return;
         }
 
-        enemy.LookAtPlayer();
 
-        attackTimer -= Time.deltaTime;
-
-        if (attackTimer > 0f || isAttacking)
-        {
-            return;
-        }
+        if (!enemy.CanAttack) return;
 
         isAttacking = true;
 
         // 40% 확률로 콤보 공격 선택
         isComboPlaying = Random.value < 0.4f;
 
-        if (isComboPlaying)
-        {
-            enemy.Animator.SetTrigger("ComboAttack");
-        }
-        else
-        {
-            enemy.Animator.SetTrigger("Attack");
-        }
+        enemy.Animator.SetTrigger(isComboPlaying ? "ComboAttack" : "Attack");
     }
 
     public void FinishAttack()
@@ -63,7 +50,7 @@ public class AttackState : IState
         Debug.Log("FinishAttack 호출");
         isAttacking = false;
         isComboPlaying = false;
-        attackTimer = attackCooldown;
+        enemy.ResetAttackCooldown(); 
     }
 
     public void Exit()

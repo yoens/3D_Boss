@@ -20,6 +20,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private int hp = 100;
     [SerializeField] private float hitDuration = 0.4f;
     [SerializeField] private int[] comboDamages = { 5, 5, 15 };
+    [SerializeField] private float attackCooldown = 1f;
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
@@ -29,12 +30,15 @@ public class EnemyController : MonoBehaviour, IDamageable
     public float HitDuration => hitDuration;
     public Animator Animator => animator;
     public int Hp => hp;
+    private float lastAttackTime = -999f; 
 
     public IdleState IdleState => idleState;
     public ChaseState ChaseState => chaseState;
     public AttackState AttackState => attackState;
     public HitState HitState => hitState;
     public DeadState DeadState => deadState;
+
+    public bool CanAttack => Time.time >= lastAttackTime + attackCooldown;
 
     private Animator animator;
 
@@ -152,5 +156,9 @@ public class EnemyController : MonoBehaviour, IDamageable
     public void FinishAttack()
     {
         attackState.FinishAttack();
+    }
+    public void ResetAttackCooldown()
+    {
+        lastAttackTime = Time.time;
     }
 }
