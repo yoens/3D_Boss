@@ -86,6 +86,10 @@ public class PlayerController : MonoBehaviour, IDamageable
         {
             HandleDodge();
         }
+        else if(isAttacking)
+        {
+            Move(Vector3.zero)
+;        }
         else
         {
             Move(moveDir);
@@ -179,15 +183,9 @@ public class PlayerController : MonoBehaviour, IDamageable
         canDodge = false;
         isInvincible = true;
         dodgeTimer = dodgeDuration;
+        
+        dodgeDir = -transform.forward;
         animator.SetTrigger("Dodge");
-        if(currentMoveDir.sqrMagnitude > 0.01f)
-        {
-            dodgeDir = currentMoveDir;
-        }
-        else
-        {
-            dodgeDir = transform.forward;
-        }
 
     }
 

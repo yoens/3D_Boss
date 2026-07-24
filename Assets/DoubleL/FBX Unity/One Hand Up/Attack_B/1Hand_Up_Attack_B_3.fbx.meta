@@ -57,7 +57,7 @@ ModelImporter:
       bodyMask: 01000000010000000100000001000000010000000100000001000000010000000100000001000000010000000100000001000000
       curves: []
       events:
-      - time: 0.42417035
+      - time: 0.38191682
         functionName: OnComboHit
         data: 
         objectReferenceParameter: {instanceID: 0}

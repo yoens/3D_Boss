@@ -162,31 +162,31 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalRotation.w
-      value: 0.18301262
+      value: 0.704927
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalRotation.x
-      value: 0.18301262
+      value: -0.704927
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalRotation.y
-      value: -0.6830128
+      value: -0.055478964
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalRotation.z
-      value: 0.6830128
+      value: -0.055478964
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 90
+      value: -90
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -20
+      value: -13
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
-      value: 130
+      value: 4
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: a095f798aba8f2946b3a23de742b2fb8, type: 3}
       propertyPath: m_Name
@@ -929,6 +929,7 @@ MonoBehaviour:
   hp: 100
   hitDuration: 0.4
   comboDamages: 05000000050000000f000000
+  attackCooldown: 0.5
 --- !u!136 &2059794887
 CapsuleCollider:
   m_ObjectHideFlags: 0
