@@ -20,7 +20,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private int hp = 100;
     [SerializeField] private float hitDuration = 0.4f;
     [SerializeField] private int[] comboDamages = { 5, 5, 15 };
-    [SerializeField] private float attackCooldown = 1f;
+    [SerializeField] private float attackCooldown = 1.5f;
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
@@ -71,8 +71,11 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void MoveToPlayer()
     {
+        if (GetDistanceToPlayer() <= attackRange) return;
+
         Vector3 direction = player.position - transform.position;
         direction.y = 0f;
+        
         if (direction.sqrMagnitude < 0.01f)
         {
             return;
@@ -109,25 +112,25 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if(player.TryGetComponent<IDamageable>(out var target))
         {
-            target.TakeDamage(10);
+            target.TakeDamage(10,gameObject);
         }
     }
 
-    public void TakeDamage(int damage)
+    public void TakeDamage(int damage, GameObject attacker)
     {
         if (stateMachine.CurrentState == deadState)
         {
             return;
         }
-        Debug.Log($"{name} 피격! 남은 HP : {hp}");
         hp -= damage;
+        Debug.Log($"{name} 피격! 남은 HP : {hp}");
 
         if (hp <= 0)
         {
             stateMachine.ChangeState(deadState);
             return;
         }
-
+        ResetAttackCooldown();
         stateMachine.ChangeState(hitState);
     }
     public void ComboAttack(int index)
@@ -149,7 +152,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if (player.TryGetComponent<IDamageable>(out var target))
         {
-            target.TakeDamage(damage);
+            target.TakeDamage(damage,gameObject);
         }
     }
 

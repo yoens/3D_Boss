@@ -15,4 +15,8 @@ public class PlayerAnimationEvents : MonoBehaviour
         Debug.Log("애니메이션 이벤트 호출됨!");
         player.CheckAttackHit();
     }
+    public void OnAttackFinished()
+    {
+        player.EndAttack();
+    }
 }

@@ -16,6 +16,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private float attackRadius = 1.2f;
     [SerializeField] private LayerMask enemyLayer;
     [SerializeField] private float attackDuration = 0.5f;
+    [SerializeField] private float parryDuration = 0.2f;
+    [SerializeField] private float parryCooldown = 0.8f;
+    [SerializeField] private int parryDamage = 10;
 
     private bool isAttacking;
 
@@ -30,6 +33,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     private Vector3 dodgeDir;
     private float dodgeTimer;
     private bool isInvincible;
+    private bool isParrying;
+    private bool canParry = true;
 
     private Vector3 currentMoveDir;
 
@@ -47,11 +52,13 @@ public class PlayerController : MonoBehaviour, IDamageable
         inputActions.Enable();
         inputActions.Player.Attack.performed += OnAttack;
         inputActions.Player.Dodge.performed += OnDodge;
+        inputActions.Player.Parry.performed += OnParry;
     }
     private void OnDisable()
     {
         inputActions.Player.Attack.performed -= OnAttack;
         inputActions.Player.Dodge.performed -= OnDodge;
+        inputActions.Player.Parry.performed -= OnParry;
         inputActions.Disable();
     }
     private void Update()
@@ -143,9 +150,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         isAttacking = true;
         Debug.Log("Attack");
         animator.SetTrigger("Attack");
-        Invoke(nameof(EndAttack), attackDuration);
     }
-    private void EndAttack()
+    public void EndAttack()
     {
         isAttacking = false;
     }
@@ -162,7 +168,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         {
             if(hit.TryGetComponent<IDamageable>(out var target))
             {
-                target.TakeDamage(10);
+                target.TakeDamage(10,gameObject);
             }
         }
     }
@@ -215,8 +221,17 @@ public class PlayerController : MonoBehaviour, IDamageable
         canDodge = true;
     }
 
-    public void TakeDamage(int amount)
+    public void TakeDamage(int amount, GameObject attacker)
     {
+        if (isParrying)
+        {
+            if(attacker != null && attacker.TryGetComponent<IDamageable>(out var target))
+            {
+                target.TakeDamage(parryDamage, gameObject);
+            }
+            return;
+        }
+
         if(isInvincible)
         {
             Debug.Log("회피 무적 - 데미지 무시");
@@ -229,5 +244,24 @@ public class PlayerController : MonoBehaviour, IDamageable
         {
             Debug.Log("플레이어 사망");
         }
+    }
+    private void OnParry(InputAction.CallbackContext context)
+    {
+        if (isParrying || !canParry || isAttacking || isDodging) return;
+        isParrying = true;
+        canParry = false;
+        animator.SetTrigger("Parry");
+        Invoke(nameof(EndParry), parryDuration);
+    }
+
+    private void EndParry()
+    {
+        isParrying = false;
+        Invoke(nameof(ResetParry), parryCooldown);
+    }
+
+    private void ResetParry()
+    {
+        canParry = true;
     }
 }
