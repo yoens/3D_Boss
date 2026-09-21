@@ -475,6 +475,9 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 64
   attackDuration: 1
+  parryDuration: 0.2
+  parryCooldown: 0.8
+  parryDamage: 10
   dodgeSpeed: 12
   dodgeDuration: 0.25
   dodgeCooldown: 1
@@ -945,6 +948,50 @@ Transform:
   m_CorrespondingSourceObject: {fileID: -1633487744486694252, guid: 97ada40f57d401540b8eafeeba1f0e9c, type: 3}
   m_PrefabInstance: {fileID: 1361743601}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2059217025
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2059217027}
+  - component: {fileID: 2059217026}
+  m_Layer: 0
+  m_Name: GameManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &2059217026
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2059217025}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8dd48e6713e4aa293bc2dacb267b2484, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+--- !u!4 &2059217027
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2059217025}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -3.7311733, y: 1.3638926, z: 11.687113}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &2059794880
 GameObject:
   m_ObjectHideFlags: 0
@@ -1037,3 +1084,4 @@ SceneRoots:
   - {fileID: 846435899}
   - {fileID: 592971298}
   - {fileID: 2059794884}
+  - {fileID: 2059217027}
