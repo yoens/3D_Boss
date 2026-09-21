@@ -1,4 +1,4 @@
-
+using System;
 using UnityEngine;
 
 public class EnemyController : MonoBehaviour, IDamageable
@@ -18,6 +18,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private float detectRange = 8f;
     [SerializeField] private float attackRange = 2f;
     [SerializeField] private int hp = 100;
+    [SerializeField] private int maxHp = 100;
     [SerializeField] private float hitDuration = 0.4f;
     [SerializeField] private int[] comboDamages = { 5, 5, 15 };
     [SerializeField] private float attackCooldown = 1.5f;
@@ -30,6 +31,9 @@ public class EnemyController : MonoBehaviour, IDamageable
     public float HitDuration => hitDuration;
     public Animator Animator => animator;
     public int Hp => hp;
+    public int MaxHp => maxHp;
+
+    public event Action<int, int> OnHealthChanged;
     private float lastAttackTime = -999f; 
 
     public IdleState IdleState => idleState;
@@ -51,6 +55,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         attackState = new AttackState(this, stateMachine);
         hitState = new HitState(this, stateMachine);
         deadState = new DeadState(this, stateMachine);
+        hp = maxHp;
     }
 
     private void Start()
@@ -60,6 +65,10 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private void Update()
     {
+        if(GameManager.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
         
         stateMachine.Update();
     }
@@ -122,12 +131,15 @@ public class EnemyController : MonoBehaviour, IDamageable
         {
             return;
         }
-        hp -= damage;
+        hp = Mathf.Max(0, hp -damage);
+
         Debug.Log($"{name} 피격! 남은 HP : {hp}");
 
+        OnHealthChanged?.Invoke(hp, maxHp);
         if (hp <= 0)
         {
             stateMachine.ChangeState(deadState);
+            GameManager.Instance.Victory();
             return;
         }
         ResetAttackCooldown();

@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System;
 
 public class PlayerController : MonoBehaviour, IDamageable
 {
@@ -27,6 +28,12 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private float dodgeCooldown = 1f;
 
     [SerializeField] private int hp = 100;
+    [SerializeField] private int maxHp = 100;
+
+    public int Hp => hp;
+    public int MaxHp => maxHp;
+
+    public event Action<int, int> OnHealthChanged;
 
     private bool isDodging;
     private bool canDodge = true;
@@ -46,6 +53,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         inputActions = new PlayerInputActions();
         animator = GetComponentInChildren<Animator>();
         mainCam = Camera.main;
+
+        hp = maxHp;
     }
     private void OnEnable()
     {
@@ -63,6 +72,11 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
     private void Update()
     {
+        if(GameManager.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+
         Vector2 moveInput = inputActions.Player.Move.ReadValue<Vector2>();
 
         Vector3 camForward = mainCam.transform.forward;
@@ -142,6 +156,11 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
     private void OnAttack(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
+        if(GameManager.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+        
         if (isAttacking || isDodging)
         {
             return;
@@ -181,6 +200,11 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void OnDodge(InputAction.CallbackContext context)
     {
+        if(GameManager.Instance.CurrentState != GameState.Playing)
+        {
+            return;
+        }
+        
         if(isDodging || !canDodge || isAttacking)
         {
             return;
@@ -232,17 +256,19 @@ public class PlayerController : MonoBehaviour, IDamageable
             return;
         }
 
-        if(isInvincible)
+        if(isInvincible || hp <= 0)
         {
             Debug.Log("회피 무적 - 데미지 무시");
             return;
         }
-        hp -= amount;
+        hp = Mathf.Max(0, hp -amount);
         animator.SetTrigger("Hit");
         Debug.Log($"플레이어 피격  hp : {hp} ");
+        OnHealthChanged?.Invoke(hp,maxHp);
         if(hp <= 0)
         {
             Debug.Log("플레이어 사망");
+            GameManager.Instance.Defeat();
         }
     }
     private void OnParry(InputAction.CallbackContext context)
