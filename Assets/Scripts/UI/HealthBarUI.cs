@@ -51,13 +51,15 @@ public class HealthBarUI : MonoBehaviour
         UpdateHP(current, max);
     }
 
-    private void UpdateHP(int current, int max)
+    private void UpdateHP(float current, float max)
     {
+        float hpRatio = max > 0f
+            ? Mathf.Clamp01(current / max)
+            : 0f;
+
         if (hpSlider != null)
         {
-            hpSlider.value = max > 0
-                ? current / max
-                : 0;
+            hpSlider.value = hpRatio;
         }
 
         if (hpText != null)
