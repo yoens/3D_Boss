@@ -22,6 +22,10 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private float hitDuration = 0.4f;
     [SerializeField] private int[] comboDamages = { 5, 5, 15 };
     [SerializeField] private float attackCooldown = 1.5f;
+    [SerializeField] private float gravity = -20f;
+
+    private float verticalVelocity;
+    private Vector3 moveDirection;
 
     public Transform Player => player;
     public float MoveSpeed => moveSpeed;
@@ -46,6 +50,8 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     private Animator animator;
 
+    private CharacterController controller;
+
     private void Awake()
     {
         stateMachine = new StateMachine();
@@ -56,6 +62,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         hitState = new HitState(this, stateMachine);
         deadState = new DeadState(this, stateMachine);
         hp = maxHp;
+        controller = GetComponent<CharacterController>();
     }
 
     private void Start()
@@ -69,13 +76,43 @@ public class EnemyController : MonoBehaviour, IDamageable
         {
             return;
         }
-        
+        moveDirection = Vector3.zero;
         stateMachine.Update();
+        ApplyMovement();
     }
 
     public float GetDistanceToPlayer()
     {
         return Vector3.Distance(transform.position, player.position);
+    }
+
+    public void Move(Vector3 direction)
+    {
+        direction.y = 0f;
+
+        if (direction.sqrMagnitude > 1f)
+        {
+            direction.Normalize();
+        }
+
+        moveDirection = direction;
+    }
+    private void ApplyMovement()
+    {
+        if (controller.isGrounded && verticalVelocity < 0f)
+            {
+                verticalVelocity = -2f;
+            }
+
+ 
+        verticalVelocity += gravity * Time.deltaTime;
+
+    
+        Vector3 motion = moveDirection * moveSpeed;
+
+        motion.y = verticalVelocity;
+
+        controller.Move(motion * Time.deltaTime);
     }
 
     public void MoveToPlayer()
@@ -92,7 +129,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         direction.Normalize();
 
-        transform.position += direction * moveSpeed * Time.deltaTime;
+        Move(direction);
         
     }
 

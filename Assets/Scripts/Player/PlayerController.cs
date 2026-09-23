@@ -13,6 +13,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private float rotationSpeed = 12f;
     private float verticalVelocity;
 
+    [SerializeField] private float hitLockDuration = 1.83f;
     [SerializeField] private Transform attackPoint;
     [SerializeField] private float attackRadius = 1.2f;
     [SerializeField] private LayerMask enemyLayer;
@@ -35,6 +36,9 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     public event Action<int, int> OnHealthChanged;
 
+    private float hitLockUntil = -1f;
+    private bool IsHitStunned => Time.time < hitLockUntil;
+    private float nextAttackTime;
     private bool isDodging;
     private bool canDodge = true;
     private Vector3 dodgeDir;
@@ -74,6 +78,19 @@ public class PlayerController : MonoBehaviour, IDamageable
     {
         if(GameManager.Instance.CurrentState != GameState.Playing)
         {
+            return;
+        }
+        if (IsHitStunned)
+        {
+            currentMoveDir = Vector3.zero;
+
+            animator.SetFloat("Speed", 0f);
+            animator.SetFloat("MoveX", 0f);
+            animator.SetFloat("MoveY", 0f);
+
+            HandleGravity();
+            Move(Vector3.zero);
+
             return;
         }
 
@@ -129,6 +146,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void HandleMouseRotation()
     {
         Ray ray = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
+        
         if (Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
         {
             Vector3 lookDir = hit.point - transform.position;
@@ -141,11 +159,13 @@ public class PlayerController : MonoBehaviour, IDamageable
 
             Quaternion targetRotation = Quaternion.LookRotation(lookDir);
 
+            float adjustedRotationSpeed = rotationSpeed * GameSettings.MouseSensitivity;
+
             transform.rotation = Quaternion.Slerp(
                 transform.rotation,
                 targetRotation,
-                rotationSpeed * Time.deltaTime
-            );
+                adjustedRotationSpeed * Time.deltaTime
+                );
         }
     }
     private void Move(Vector3 moveDir)
@@ -156,12 +176,13 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
     private void OnAttack(UnityEngine.InputSystem.InputAction.CallbackContext context)
     {
+        
         if(GameManager.Instance.CurrentState != GameState.Playing)
         {
             return;
         }
         
-        if (isAttacking || isDodging)
+        if (isAttacking || isDodging || IsHitStunned|| Time.time < nextAttackTime)
         {
             return;
         }
@@ -172,7 +193,9 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
     public void EndAttack()
     {
+        Debug.Log("EndAttack 실행");
         isAttacking = false;
+        nextAttackTime = Time.time + attackDuration;
     }
 
     public void CheckAttackHit()
@@ -205,7 +228,7 @@ public class PlayerController : MonoBehaviour, IDamageable
             return;
         }
         
-        if(isDodging || !canDodge || isAttacking)
+        if(isDodging || !canDodge || isAttacking || IsHitStunned)
         {
             return;
         }
@@ -261,6 +284,10 @@ public class PlayerController : MonoBehaviour, IDamageable
             Debug.Log("회피 무적 - 데미지 무시");
             return;
         }
+        isAttacking = false;
+        animator.ResetTrigger("Attack");
+        hitLockUntil = Time.time + hitLockDuration;
+
         hp = Mathf.Max(0, hp -amount);
         animator.SetTrigger("Hit");
         Debug.Log($"플레이어 피격  hp : {hp} ");
@@ -273,7 +300,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     }
     private void OnParry(InputAction.CallbackContext context)
     {
-        if (isParrying || !canParry || isAttacking || isDodging) return;
+        
+        if (isParrying || !canParry || isAttacking || isDodging || IsHitStunned) return;
         isParrying = true;
         canParry = false;
         animator.SetTrigger("Parry");
