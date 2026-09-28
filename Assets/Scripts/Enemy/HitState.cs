@@ -35,6 +35,12 @@ public class HitState : IState
         }
 
         float distance = enemy.GetDistanceToPlayer();
+        
+        if (enemy.CanHitPlayer())
+        {
+            stateMachine.ChangeState(enemy.AttackState);
+            return;
+        }
 
         if (distance <= enemy.AttackRange)
         {

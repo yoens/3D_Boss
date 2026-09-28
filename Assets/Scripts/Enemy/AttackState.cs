@@ -31,6 +31,12 @@ public class AttackState : IState
         if (isAttacking)
             return;
 
+        if (!enemy.CanHitPlayer())
+        {
+            stateMachine.ChangeState(enemy.ChaseState);
+            return;
+        }
+
         if (enemy.GetDistanceToPlayer() > enemy.AttackRange)
         {
             stateMachine.ChangeState(enemy.ChaseState);
