@@ -2,13 +2,16 @@ using UnityEngine;
 
 public class AttackState : IState
 {
-    private EnemyController enemy;
-    private StateMachine stateMachine;
+    private readonly EnemyController enemy;
+    private readonly StateMachine stateMachine;
 
     private bool isAttacking;
-    private bool isComboPlaying;
 
-    public AttackState(EnemyController enemy, StateMachine stateMachine)
+    public bool IsAttacking => isAttacking;
+
+    public AttackState(
+        EnemyController enemy,
+        StateMachine stateMachine)
     {
         this.enemy = enemy;
         this.stateMachine = stateMachine;
@@ -17,45 +20,42 @@ public class AttackState : IState
     public void Enter()
     {
         isAttacking = false;
-        isComboPlaying = false;
+        enemy.Animator.SetFloat("Speed", 0f);
     }
 
     public void Update()
     {
+        
         enemy.LookAtPlayer();
 
-        if (isAttacking) return;
+        if (isAttacking)
+            return;
 
-        float distance = enemy.GetDistanceToPlayer();
-
-        if (distance > enemy.AttackRange)
+        if (enemy.GetDistanceToPlayer() > enemy.AttackRange)
         {
             stateMachine.ChangeState(enemy.ChaseState);
             return;
         }
 
-
-        if (!enemy.CanAttack) return;
+        if (!enemy.CanAttack)
+            return;
 
         isAttacking = true;
-
-        // 40% 확률로 콤보 공격 선택
-        isComboPlaying = Random.value < 0.4f;
-
-        enemy.Animator.SetTrigger(isComboPlaying ? "ComboAttack" : "Attack");
+        enemy.Animator.SetTrigger("Attack");
     }
 
     public void FinishAttack()
     {
-        Debug.Log("FinishAttack 호출");
+        if (!isAttacking)
+            return;
+
         isAttacking = false;
-        isComboPlaying = false;
-        enemy.ResetAttackCooldown(); 
+        enemy.ResetAttackCooldown();
     }
 
     public void Exit()
     {
         isAttacking = false;
-        isComboPlaying = false;
+        enemy.Animator.ResetTrigger("Attack");
     }
 }

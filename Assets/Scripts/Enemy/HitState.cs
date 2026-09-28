@@ -1,3 +1,5 @@
+using UnityEngine;
+
 public class HitState : IState
 {
     private EnemyController enemy;
@@ -15,10 +17,14 @@ public class HitState : IState
     {
         hitTimer = enemy.HitDuration;
 
-        enemy.Animator.ResetTrigger("Attack");
-        enemy.Animator.SetTrigger("Hit");
-    }
+        enemy.Move(Vector3.zero);
+        enemy.Animator.SetFloat("Speed", 0f);
 
+        enemy.Animator.ResetTrigger("Attack");
+        enemy.Animator.ResetTrigger("Hit");
+        enemy.Animator.SetTrigger("Hit");
+    
+    }
     public void Update()
     {
         hitTimer -= UnityEngine.Time.deltaTime;

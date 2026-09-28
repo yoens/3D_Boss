@@ -1,26 +1,33 @@
+using UnityEngine;
+
 public class DeadState : IState
 {
-    private EnemyController enemy;
-    private StateMachine stateMachine;
+    private readonly EnemyController enemy;
 
-    public DeadState(EnemyController enemy, StateMachine stateMachine)
+    public DeadState(
+        EnemyController enemy,
+        StateMachine stateMachine)
     {
         this.enemy = enemy;
-        this.stateMachine = stateMachine;
     }
 
     public void Enter()
     {
-        UnityEngine.Debug.Log("Enemy down");
+        Debug.Log("Enemy down");
+
+        enemy.Move(Vector3.zero);
+
+        enemy.Animator.SetFloat("Speed", 0f);
+        enemy.Animator.ResetTrigger("Attack");
+        enemy.Animator.ResetTrigger("Hit");
+        enemy.Animator.SetTrigger("Death");
     }
 
     public void Update()
     {
-
     }
 
     public void Exit()
     {
-
     }
 }

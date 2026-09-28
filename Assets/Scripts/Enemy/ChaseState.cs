@@ -26,7 +26,7 @@ public class ChaseState : IState
             stateMachine.ChangeState(enemy.IdleState);
             return;
         }
-        if(distance < enemy.AttackRange)
+        if(distance <= enemy.AttackRange)
         {
             stateMachine.ChangeState(enemy.AttackState);
             return;

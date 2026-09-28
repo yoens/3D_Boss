@@ -20,7 +20,8 @@ public class EnemyController : MonoBehaviour, IDamageable
     [SerializeField] private int hp = 100;
     [SerializeField] private int maxHp = 100;
     [SerializeField] private float hitDuration = 0.4f;
-    [SerializeField] private int[] comboDamages = { 5, 5, 15 };
+    //[SerializeField] private int[] comboDamages = { 5, 5, 15 };
+    [SerializeField] private int attackDamage = 10;
     [SerializeField] private float attackCooldown = 1.5f;
     [SerializeField] private float gravity = -20f;
 
@@ -49,7 +50,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     public bool CanAttack => Time.time >= lastAttackTime + attackCooldown;
 
     private Animator animator;
-
+    private bool victoryProcessed;
     private CharacterController controller;
 
     private void Awake()
@@ -154,11 +155,21 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void Attack()
     {
-        if (GetDistanceToPlayer() > attackRange) return;
+        if (GameManager.Instance.CurrentState != GameState.Playing)
+            return;
 
-        if(player.TryGetComponent<IDamageable>(out var target))
+        if (hp <= 0 || player == null)
+            return;
+
+        if (stateMachine.CurrentState != attackState || !attackState.IsAttacking)
+            return;
+
+        if (GetDistanceToPlayer() > attackRange)
+            return;
+
+        if (player.TryGetComponent<IDamageable>(out var target))
         {
-            target.TakeDamage(10,gameObject);
+            target.TakeDamage(attackDamage, gameObject);
         }
     }
 
@@ -176,41 +187,31 @@ public class EnemyController : MonoBehaviour, IDamageable
         if (hp <= 0)
         {
             stateMachine.ChangeState(deadState);
-            GameManager.Instance.Victory();
             return;
         }
         ResetAttackCooldown();
         stateMachine.ChangeState(hitState);
     }
-    public void ComboAttack(int index)
-    {
-        if (GetDistanceToPlayer() > attackRange)
-        {
-            return;
-        }
-
-        int arrayIndex = index - 1;
-
-        if (arrayIndex < 0 || arrayIndex >= comboDamages.Length)
-        {
-            Debug.LogWarning($"잘못된 콤보 인덱스: {index}");
-            return;
-        }
-
-        int damage = comboDamages[arrayIndex];
-
-        if (player.TryGetComponent<IDamageable>(out var target))
-        {
-            target.TakeDamage(damage,gameObject);
-        }
-    }
 
     public void FinishAttack()
     {
+        if (stateMachine.CurrentState != attackState)
+            return;
+
         attackState.FinishAttack();
     }
     public void ResetAttackCooldown()
     {
         lastAttackTime = Time.time;
+    }
+    public void FinishDeath()
+    {
+        if (stateMachine.CurrentState != deadState || victoryProcessed)
+        {
+            return;
+        }
+
+        victoryProcessed = true;
+        GameManager.Instance.Victory();
     }
 }

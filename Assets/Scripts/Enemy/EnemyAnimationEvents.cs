@@ -13,13 +13,13 @@ public class EnemyAnimationEvents : MonoBehaviour
     {
         enemy.Attack();
     }
-    public void OnComboHit(int comboIndex)   
-    {
-        enemy.ComboAttack(comboIndex);
-    }
     public void OnAttackFinished()
     {
         enemy.FinishAttack();
+    }
+    public void OnDeathFinished()
+    {
+        enemy.FinishDeath();
     }
     
 }
