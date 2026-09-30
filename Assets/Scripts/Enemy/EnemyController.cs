@@ -12,6 +12,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     private AttackState attackState;
     private DeadState deadState;
     private HitState hitState;
+    private SpecialAttackState specialAttackState;
 
     [SerializeField] private Transform player;
 
@@ -38,6 +39,31 @@ public class EnemyController : MonoBehaviour, IDamageable
     [Header("Wander")]
     [SerializeField] private float wanderRadius = 6f;
     [SerializeField] private float wanderSpeed = 1.5f;
+
+    [SerializeField] private bool isBoss;
+    public bool IsBoss => isBoss;
+    public bool IsInCombat => isInCombat;
+    public int BossPhase => phaseTwo ? 2 : 1;
+    public float SpecialRecoveryDuration => specialRecoveryDuration;
+    public float SpecialTimeout => specialTimeout;
+    public event Action<bool> OnCombatStateChanged;
+
+    [Header("Boss Phase")]
+    [SerializeField, Range(0.01f, 0.99f)] private float phaseTwoHpRatio = 0.5f;
+
+    [Header("Boss Special Attack")]
+    [SerializeField, Min(0.1f)] private float specialRadius = 3f;
+    [SerializeField, Min(0.1f)] private float specialHitHeight = 2f;
+    [SerializeField, Min(1)] private int specialDamage = 25;
+    [SerializeField, Min(0f)] private float specialCooldown = 8f;
+    [SerializeField, Min(0f)] private float specialRecoveryDuration = 1f;
+    [SerializeField, Min(1f)] private float specialTimeout = 8f;
+    [SerializeField] private BossRangeIndicator specialIndicator;
+
+    private bool isInCombat;
+    private bool phaseTwo;
+    private float nextSpecialTime;
+    private Vector3 specialOrigin;
 
     private Animator animator;
     private CharacterController controller;
@@ -87,6 +113,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         attackState = new AttackState(this, stateMachine);
         hitState = new HitState(this, stateMachine);
         deadState = new DeadState(this, stateMachine);
+        specialAttackState = new SpecialAttackState(this, stateMachine);
 
         hp = maxHp;
     }
@@ -94,6 +121,9 @@ public class EnemyController : MonoBehaviour, IDamageable
     private void Start()
     {
         stateMachine.ChangeState(idleState);
+
+        if (isBoss && (specialIndicator == null || !specialIndicator.IsReady))
+            Debug.LogWarning($"{name}: Special Indicator와 Indicator Material을 연결해야 특수 공격을 사용할 수 있습니다.");
     }
 
     private void Update()
@@ -103,6 +133,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         moveDirection = Vector3.zero;
 
+        UpdateBossPhase();
         stateMachine.Update();
         ApplyMovement();
     }
@@ -430,7 +461,7 @@ public class EnemyController : MonoBehaviour, IDamageable
             return;
         }
 
-        if (!CanHitPlayer())
+        if (!attackState.TryConsumeHit() || !CanHitPlayer())
             return;
 
         if (player.TryGetComponent<IDamageable>(out var target))
@@ -441,18 +472,38 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void TakeDamage(int damage, GameObject attacker)
     {
-        if (stateMachine.CurrentState == deadState)
+        ApplyDamage(damage, false);
+    }
+
+    public void TakeParryDamage(int damage, GameObject attacker)
+    {
+        ApplyDamage(damage, true);
+    }
+
+    private void ApplyDamage(int damage, bool stagger)
+    {
+        if (hp <= 0 || stateMachine.CurrentState == deadState || damage <= 0)
+            return;
+
+        if (GameManager.Instance.CurrentState != GameState.Playing)
             return;
 
         hp = Mathf.Max(0, hp - damage);
-
-        Debug.Log($"{name} 피격! 남은 HP : {hp}");
-
         OnHealthChanged?.Invoke(hp, maxHp);
 
         if (hp <= 0)
         {
+            SetInCombat(false);
             stateMachine.ChangeState(deadState);
+            return;
+        }
+
+        SetInCombat(true);
+
+        if (isBoss && (!stagger || stateMachine.CurrentState == specialAttackState))
+        {
+            if (stateMachine.CurrentState == idleState)
+                stateMachine.ChangeState(chaseState);
             return;
         }
 
@@ -475,13 +526,168 @@ public class EnemyController : MonoBehaviour, IDamageable
 
     public void FinishDeath()
     {
-        if (stateMachine.CurrentState != deadState ||
-            victoryProcessed)
+        if (stateMachine.CurrentState != deadState || victoryProcessed)
         {
             return;
         }
 
         victoryProcessed = true;
-        GameManager.Instance.Victory();
+        SetInCombat(false);
+
+        if (isBoss)
+        {
+            GameManager.Instance.Victory();
+        }
+        else
+        {
+            Destroy(gameObject);
+        }
+    }
+
+    public void SetInCombat(bool value)
+    {
+        bool nextValue = value && isBoss && hp > 0 && isActiveAndEnabled;
+        if (isInCombat == nextValue)
+            return;
+
+        isInCombat = nextValue;
+        OnCombatStateChanged?.Invoke(isInCombat);
+    }
+
+    private void OnDisable()
+    {
+        SetInCombat(false);
+        HideSpecialIndicator();
+    }
+
+    private void UpdateBossPhase()
+    {
+        if (!isBoss || !isInCombat || phaseTwo || hp <= 0 || maxHp <= 0)
+            return;
+
+        if ((float)hp / maxHp > phaseTwoHpRatio)
+            return;
+
+        if (stateMachine.CurrentState == hitState ||
+            stateMachine.CurrentState == specialAttackState ||
+            attackState.IsAttacking)
+            return;
+
+        phaseTwo = true;
+        Debug.Log($"{name}: 보스 2페이즈 시작");
+    }
+
+    public bool TryStartSpecialAttack()
+    {
+        if (!isBoss || !phaseTwo || !isInCombat || hp <= 0 || player == null)
+            return false;
+
+        if (!CanAttack || Time.time < nextSpecialTime)
+            return false;
+
+        if (specialIndicator == null || !specialIndicator.IsReady)
+            return false;
+
+        if (!IsPlayerInSpecialArea(GetFeetPosition()))
+            return false;
+
+        if (stateMachine.CurrentState != chaseState &&
+            stateMachine.CurrentState != attackState)
+            return false;
+
+        stateMachine.ChangeState(specialAttackState);
+        return true;
+    }
+
+    public void BeginSpecialAttack()
+    {
+        Move(Vector3.zero);
+        ClearNavigationPath();
+        LookAtPlayer();
+        specialOrigin = GetFeetPosition();
+        specialIndicator.ShowWarning(specialOrigin, specialRadius);
+        animator.SetFloat("Speed", 0f);
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Hit");
+        animator.SetBool("IsSpecialAttacking", true);
+        animator.SetTrigger("SpecialAttack");
+    }
+
+    private bool IsPlayerInSpecialArea(Vector3 origin)
+    {
+        if (player == null)
+            return false;
+
+        Collider targetCollider = player.GetComponent<Collider>();
+        Vector3 targetPoint = targetCollider != null
+            ? targetCollider.bounds.center : player.position;
+        Vector3 horizontal = targetPoint - origin;
+        horizontal.y = 0f;
+
+        if (horizontal.sqrMagnitude > specialRadius * specialRadius)
+            return false;
+
+        if (targetCollider != null)
+        {
+            if (targetCollider.bounds.max.y < origin.y - 0.1f ||
+                targetCollider.bounds.min.y > origin.y + specialHitHeight)
+                return false;
+        }
+        else if (Mathf.Abs(targetPoint.y - origin.y) > specialHitHeight)
+        {
+            return false;
+        }
+
+        return !Physics.Linecast(
+            origin + Vector3.up * 0.5f,
+            targetPoint,
+            obstacleLayer,
+            QueryTriggerInteraction.Ignore);
+    }
+
+    public void SpecialAttackHit()
+    {
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
+            return;
+
+        if (stateMachine.CurrentState != specialAttackState)
+            return;
+
+        specialAttackState.Hit();
+    }
+
+    public void ApplySpecialAttackDamage()
+    {
+        specialIndicator.ShowExplosion();
+
+        if (!IsPlayerInSpecialArea(specialOrigin))
+            return;
+
+        if (player.TryGetComponent<PlayerController>(out var target))
+            target.TakeDamage(specialDamage, gameObject, false);
+    }
+
+    public void FinishSpecialAttack()
+    {
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
+            return;
+
+        if (stateMachine.CurrentState == specialAttackState)
+            specialAttackState.FinishAnimation();
+    }
+
+    public void EndSpecialAttack()
+    {
+        HideSpecialIndicator();
+        animator.ResetTrigger("SpecialAttack");
+        animator.SetBool("IsSpecialAttacking", false);
+        nextSpecialTime = Time.time + specialCooldown;
+        ResetAttackCooldown();
+    }
+
+    public void HideSpecialIndicator()
+    {
+        if (specialIndicator != null)
+            specialIndicator.Hide();
     }
 }

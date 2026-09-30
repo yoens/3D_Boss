@@ -1,6 +1,7 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System;
 
 public class PlayerController : MonoBehaviour, IDamageable
 {
@@ -21,19 +22,17 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private float parryDuration = 0.2f;
     [SerializeField] private float parryCooldown = 0.8f;
     [SerializeField] private int parryDamage = 10;
-
     private bool isAttacking;
+    private readonly HashSet<IDamageable> attackTargets = new HashSet<IDamageable>();
 
     [SerializeField] private float dodgeSpeed = 12f;
     [SerializeField] private float dodgeDuration = 0.25f;
     [SerializeField] private float dodgeCooldown = 1f;
-
     [SerializeField] private int hp = 100;
     [SerializeField] private int maxHp = 100;
 
     public int Hp => hp;
     public int MaxHp => maxHp;
-
     public event Action<int, int> OnHealthChanged;
 
     private float hitLockUntil = -1f;
@@ -46,9 +45,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool isInvincible;
     private bool isParrying;
     private bool canParry = true;
-
     private Vector3 currentMoveDir;
-
     private Animator animator;
 
     private void Awake()
@@ -57,16 +54,17 @@ public class PlayerController : MonoBehaviour, IDamageable
         inputActions = new PlayerInputActions();
         animator = GetComponentInChildren<Animator>();
         mainCam = Camera.main;
-
         hp = maxHp;
     }
+
     private void OnEnable()
     {
-        inputActions.Enable();
         inputActions.Player.Attack.performed += OnAttack;
         inputActions.Player.Dodge.performed += OnDodge;
         inputActions.Player.Parry.performed += OnParry;
+        inputActions.Enable();
     }
+
     private void OnDisable()
     {
         inputActions.Player.Attack.performed -= OnAttack;
@@ -74,28 +72,24 @@ public class PlayerController : MonoBehaviour, IDamageable
         inputActions.Player.Parry.performed -= OnParry;
         inputActions.Disable();
     }
+
     private void Update()
     {
-        if(GameManager.Instance.CurrentState != GameState.Playing)
-        {
+        if (GameManager.Instance.CurrentState != GameState.Playing)
             return;
-        }
+
         if (IsHitStunned)
         {
             currentMoveDir = Vector3.zero;
-
             animator.SetFloat("Speed", 0f);
             animator.SetFloat("MoveX", 0f);
             animator.SetFloat("MoveY", 0f);
-
             HandleGravity();
             Move(Vector3.zero);
-
             return;
         }
 
         Vector2 moveInput = inputActions.Player.Move.ReadValue<Vector2>();
-
         Vector3 camForward = mainCam.transform.forward;
         Vector3 camRight = mainCam.transform.right;
         camForward.y = 0f;
@@ -103,158 +97,133 @@ public class PlayerController : MonoBehaviour, IDamageable
         camForward.Normalize();
         camRight.Normalize();
 
-        animator.SetFloat("Speed", currentMoveDir.magnitude);
-
         Vector3 moveDir = camForward * moveInput.y + camRight * moveInput.x;
         if (moveDir.sqrMagnitude > 1f)
-        {
             moveDir.Normalize();
-        }
+
         currentMoveDir = moveDir;
-        
+        animator.SetFloat("Speed", currentMoveDir.magnitude);
         Vector3 localMove = transform.InverseTransformDirection(moveDir);
         animator.SetFloat("MoveX", localMove.x);
         animator.SetFloat("MoveY", localMove.z);
+
         HandleGravity();
-        if(!isDodging)
-        {
+        if (!isDodging)
             HandleMouseRotation();
-        }
-        if(isDodging)
-        {
+
+        if (isDodging)
             HandleDodge();
-        }
-        else if(isAttacking)
-        {
-            Move(Vector3.zero)
-;        }
+        else if (isAttacking)
+            Move(Vector3.zero);
         else
-        {
             Move(moveDir);
-        }
-        
     }
 
     private void HandleGravity()
     {
         if (controller.isGrounded && verticalVelocity < 0f)
-        {
             verticalVelocity = -2f;
-        }
         verticalVelocity += gravity * Time.deltaTime;
     }
+
     private void HandleMouseRotation()
     {
+        if (Mouse.current == null)
+            return;
+
         Ray ray = mainCam.ScreenPointToRay(Mouse.current.position.ReadValue());
-        
-        if (Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
-        {
-            Vector3 lookDir = hit.point - transform.position;
-            lookDir.y = 0f;
+        if (!Physics.Raycast(ray, out RaycastHit hit, 100f, groundLayer))
+            return;
 
-            if (lookDir.sqrMagnitude < 0.01f)
-            {
-                return;
-            }
+        Vector3 lookDir = hit.point - transform.position;
+        lookDir.y = 0f;
+        if (lookDir.sqrMagnitude < 0.01f)
+            return;
 
-            Quaternion targetRotation = Quaternion.LookRotation(lookDir);
-
-            float adjustedRotationSpeed = rotationSpeed * GameSettings.MouseSensitivity;
-
-            transform.rotation = Quaternion.Slerp(
-                transform.rotation,
-                targetRotation,
-                adjustedRotationSpeed * Time.deltaTime
-                );
-        }
+        Quaternion targetRotation = Quaternion.LookRotation(lookDir);
+        float adjustedRotationSpeed = rotationSpeed * GameSettings.MouseSensitivity;
+        transform.rotation = Quaternion.Slerp(
+            transform.rotation, targetRotation,
+            adjustedRotationSpeed * Time.deltaTime);
     }
+
     private void Move(Vector3 moveDir)
     {
         Vector3 motion = moveDir * moveSpeed;
         motion.y = verticalVelocity;
         controller.Move(motion * Time.deltaTime);
     }
-    private void OnAttack(UnityEngine.InputSystem.InputAction.CallbackContext context)
+
+    private void OnAttack(InputAction.CallbackContext context)
     {
-        
-        if(GameManager.Instance.CurrentState != GameState.Playing)
-        {
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
             return;
-        }
-        
-        if (isAttacking || isDodging || IsHitStunned|| Time.time < nextAttackTime)
-        {
+
+        if (isAttacking || isDodging || isParrying || IsHitStunned || Time.time < nextAttackTime)
             return;
-        }
 
         isAttacking = true;
-        Debug.Log("Attack");
+        attackTargets.Clear();
         animator.SetTrigger("Attack");
     }
+
     public void EndAttack()
     {
-        Debug.Log("EndAttack 실행");
+        if (!isAttacking)
+            return;
+
         isAttacking = false;
         nextAttackTime = Time.time + attackDuration;
     }
 
     public void CheckAttackHit()
     {
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0 ||
+            !isAttacking || IsHitStunned || attackPoint == null)
+            return;
+
         Collider[] hits = Physics.OverlapSphere(
-            attackPoint.position,
-            attackRadius,
-            enemyLayer
-        );
+            attackPoint.position, attackRadius, enemyLayer,
+            QueryTriggerInteraction.Ignore);
 
         foreach (Collider hit in hits)
         {
-            if(hit.TryGetComponent<IDamageable>(out var target))
-            {
-                target.TakeDamage(10,gameObject);
-            }
+            IDamageable target = hit.GetComponentInParent<IDamageable>();
+            if (target != null && !ReferenceEquals(target, this) && attackTargets.Add(target))
+                target.TakeDamage(10, gameObject);
         }
     }
+
     private void OnDrawGizmosSelected()
     {
-        if (attackPoint == null) return;
-
-        Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
+        if (attackPoint != null)
+            Gizmos.DrawWireSphere(attackPoint.position, attackRadius);
     }
 
     private void OnDodge(InputAction.CallbackContext context)
     {
-        if(GameManager.Instance.CurrentState != GameState.Playing)
-        {
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
             return;
-        }
-        
-        if(isDodging || !canDodge || isAttacking || IsHitStunned)
-        {
+
+        if (isDodging || !canDodge || isAttacking || isParrying || IsHitStunned)
             return;
-        }
+
         isDodging = true;
         canDodge = false;
         isInvincible = true;
         dodgeTimer = dodgeDuration;
-        
         dodgeDir = -transform.forward;
         animator.SetTrigger("Dodge");
-
     }
 
     private void HandleDodge()
     {
         dodgeTimer -= Time.deltaTime;
-
         Vector3 motion = dodgeDir * dodgeSpeed;
         motion.y = verticalVelocity;
-
         controller.Move(motion * Time.deltaTime);
-
-        if(dodgeTimer <= 0f)
-        {
+        if (dodgeTimer <= 0f)
             EndDodge();
-        }
     }
 
     private void EndDodge()
@@ -263,6 +232,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         isInvincible = false;
         Invoke(nameof(ResetDodge), dodgeCooldown);
     }
+
     private void ResetDodge()
     {
         canDodge = true;
@@ -270,38 +240,57 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     public void TakeDamage(int amount, GameObject attacker)
     {
-        if (isParrying)
+        TakeDamage(amount, attacker, true);
+    }
+
+    public void TakeDamage(int amount, GameObject attacker, bool canBeParried)
+    {
+        if (GameManager.Instance.CurrentState != GameState.Playing ||
+            hp <= 0 || isInvincible || amount <= 0)
+            return;
+
+        if (canBeParried && isParrying)
         {
-            if(attacker != null && attacker.TryGetComponent<IDamageable>(out var target))
+            EndParry();
+            if (attacker != null)
             {
-                target.TakeDamage(parryDamage, gameObject);
+                EnemyController targetEnemy = attacker.GetComponentInParent<EnemyController>();
+                if (targetEnemy != null)
+                    targetEnemy.TakeParryDamage(parryDamage, gameObject);
+                else if (attacker.TryGetComponent<IDamageable>(out var target))
+                    target.TakeDamage(parryDamage, gameObject);
             }
             return;
         }
 
-        if(isInvincible || hp <= 0)
-        {
-            Debug.Log("회피 무적 - 데미지 무시");
-            return;
-        }
-        isAttacking = false;
-        animator.ResetTrigger("Attack");
-        hitLockUntil = Time.time + hitLockDuration;
+        if (isParrying)
+            EndParry();
 
-        hp = Mathf.Max(0, hp -amount);
-        animator.SetTrigger("Hit");
-        Debug.Log($"플레이어 피격  hp : {hp} ");
-        OnHealthChanged?.Invoke(hp,maxHp);
-        if(hp <= 0)
+        if (isAttacking)
         {
-            Debug.Log("플레이어 사망");
-            GameManager.Instance.Defeat();
+            isAttacking = false;
+            nextAttackTime = Time.time + attackDuration;
         }
+
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Parry");
+        hitLockUntil = Time.time + hitLockDuration;
+        hp = Mathf.Max(0, hp - amount);
+        animator.SetTrigger("Hit");
+        OnHealthChanged?.Invoke(hp, maxHp);
+
+        if (hp <= 0)
+            GameManager.Instance.Defeat();
     }
+
     private void OnParry(InputAction.CallbackContext context)
     {
-        
-        if (isParrying || !canParry || isAttacking || isDodging || IsHitStunned) return;
+        if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
+            return;
+
+        if (isParrying || !canParry || isAttacking || isDodging || IsHitStunned)
+            return;
+
         isParrying = true;
         canParry = false;
         animator.SetTrigger("Parry");
@@ -310,6 +299,10 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void EndParry()
     {
+        if (!isParrying)
+            return;
+
+        CancelInvoke(nameof(EndParry));
         isParrying = false;
         Invoke(nameof(ResetParry), parryCooldown);
     }

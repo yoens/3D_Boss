@@ -11,15 +11,31 @@ public class EnemyAnimationEvents : MonoBehaviour
 
     public void OnAttackHit()
     {
-        enemy.Attack();
+        if (enemy != null)
+            enemy.Attack();
     }
+
     public void OnAttackFinished()
     {
-        enemy.FinishAttack();
+        if (enemy != null)
+            enemy.FinishAttack();
     }
+
+    public void OnSpecialAttackHit()
+    {
+        if (enemy != null)
+            enemy.SpecialAttackHit();
+    }
+
+    public void OnSpecialAttackFinished()
+    {
+        if (enemy != null)
+            enemy.FinishSpecialAttack();
+    }
+
     public void OnDeathFinished()
     {
-        enemy.FinishDeath();
+        if (enemy != null)
+            enemy.FinishDeath();
     }
-    
 }

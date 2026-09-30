@@ -5,9 +5,7 @@ public class ChaseState : IState
     private readonly EnemyController enemy;
     private readonly StateMachine stateMachine;
 
-    public ChaseState(
-        EnemyController enemy,
-        StateMachine stateMachine)
+    public ChaseState(EnemyController enemy, StateMachine stateMachine)
     {
         this.enemy = enemy;
         this.stateMachine = stateMachine;
@@ -15,17 +13,21 @@ public class ChaseState : IState
 
     public void Enter()
     {
+        enemy.SetInCombat(true);
         enemy.ClearNavigationPath();
         enemy.Animator.SetFloat("Speed", 0f);
     }
 
     public void Update()
     {
-        if (enemy.GetDistanceToPlayer() > enemy.ChaseLoseRange)
+        if (enemy.Player == null || enemy.GetDistanceToPlayer() > enemy.ChaseLoseRange)
         {
             stateMachine.ChangeState(enemy.IdleState);
             return;
         }
+
+        if (enemy.TryStartSpecialAttack())
+            return;
 
         if (enemy.CanHitPlayer())
         {
@@ -33,7 +35,6 @@ public class ChaseState : IState
             return;
         }
 
-        // 경로 방향으로의 회전도 이 메서드에서 처리합니다.
         enemy.MoveToPlayer();
     }
 

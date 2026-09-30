@@ -1,8 +1,8 @@
-
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 
+[RequireComponent(typeof(CanvasGroup))]
 public class HealthBarUI : MonoBehaviour
 {
     [SerializeField] private Slider hpSlider;
@@ -11,50 +11,119 @@ public class HealthBarUI : MonoBehaviour
     [SerializeField] private PlayerController player;
     [SerializeField] private EnemyController enemy;
 
+    private CanvasGroup canvasGroup;
+
+    private void Awake()
+    {
+        canvasGroup = GetComponent<CanvasGroup>();
+
+        if (canvasGroup == null)
+        {
+            canvasGroup = gameObject.AddComponent<CanvasGroup>();
+        }
+
+        canvasGroup.interactable = false;
+        canvasGroup.blocksRaycasts = false;
+
+        if (hpSlider != null)
+        {
+            hpSlider.minValue = 0f;
+            hpSlider.maxValue = 1f;
+            hpSlider.wholeNumbers = false;
+        }
+
+        SetVisible(false);
+    }
+
     private void OnEnable()
     {
         if (player != null)
         {
-            player.OnHealthChanged += UpdatePlayerHP;
-
-            UpdatePlayerHP(player.Hp, player.MaxHp);
+            player.OnHealthChanged += UpdateHP;
         }
-
-        if (enemy != null)
+        else if (enemy != null)
         {
-            enemy.OnHealthChanged += UpdateEnemyHP;
-
-            UpdateEnemyHP(enemy.Hp, enemy.MaxHp);
+            enemy.OnHealthChanged += UpdateHP;
+            enemy.OnCombatStateChanged += HandleCombatStateChanged;
         }
+
+        Refresh();
+    }
+
+    private void Start()
+    {
+        Refresh();
     }
 
     private void OnDisable()
     {
         if (player != null)
         {
-            player.OnHealthChanged -= UpdatePlayerHP;
+            player.OnHealthChanged -= UpdateHP;
+        }
+        else if (enemy != null)
+        {
+            enemy.OnHealthChanged -= UpdateHP;
+            enemy.OnCombatStateChanged -= HandleCombatStateChanged;
+        }
+
+        SetVisible(false);
+    }
+
+    private void Refresh()
+    {
+        if (player != null)
+        {
+            UpdateHP(player.Hp, player.MaxHp);
+            SetVisible(true);
+            return;
         }
 
         if (enemy != null)
         {
-            enemy.OnHealthChanged -= UpdateEnemyHP;
+            UpdateHP(enemy.Hp, enemy.MaxHp);
+
+            SetVisible(
+                enemy.IsBoss &&
+                enemy.IsInCombat &&
+                enemy.Hp > 0
+            );
+
+            return;
+        }
+
+        SetVisible(false);
+    }
+
+    private void HandleCombatStateChanged(bool inCombat)
+    {
+        if (enemy == null)
+        {
+            SetVisible(false);
+            return;
+        }
+
+        UpdateHP(enemy.Hp, enemy.MaxHp);
+
+        SetVisible(
+            enemy.IsBoss &&
+            inCombat &&
+            enemy.Hp > 0
+        );
+    }
+
+    private void SetVisible(bool visible)
+    {
+        if (canvasGroup != null)
+        {
+            canvasGroup.alpha = visible ? 1f : 0f;
         }
     }
 
-    private void UpdatePlayerHP(int current, int max)
+    private void UpdateHP(int current, int max)
     {
-        UpdateHP(current, max);
-    }
-
-    private void UpdateEnemyHP(int current, int max)
-    {
-        UpdateHP(current, max);
-    }
-
-    private void UpdateHP(float current, float max)
-    {
-        float hpRatio = max > 0f
-            ? Mathf.Clamp01(current / max)
+        float hpRatio = max > 0
+            ? Mathf.Clamp01((float)current / max)
             : 0f;
 
         if (hpSlider != null)
@@ -64,7 +133,7 @@ public class HealthBarUI : MonoBehaviour
 
         if (hpText != null)
         {
-            hpText.text = $"{current:0} / {max:0}";
+            hpText.text = $"{current} / {max}";
         }
     }
 }
