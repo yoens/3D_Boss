@@ -25,9 +25,16 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool isAttacking;
     private readonly HashSet<IDamageable> attackTargets = new HashSet<IDamageable>();
 
-    [SerializeField] private float dodgeSpeed = 12f;
-    [SerializeField] private float dodgeDuration = 0.25f;
-    [SerializeField] private float dodgeCooldown = 1f;
+    [Header("Dodge")]
+    [SerializeField] private float dodgeSpeed = 10f;
+    [SerializeField, Min(0.05f)] private float dodgeDuration = 0.6f;   // 구르기 애니메이션 길이에 맞출 것
+    [SerializeField] private float dodgeCooldown = 0.5f;
+    // 구르기 진행도(0~1)에 따른 속도 배율: 초반엔 빠르고 끝에서 감속
+    [SerializeField] private AnimationCurve dodgeSpeedCurve = new AnimationCurve(
+        new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0.2f));
+    // 무적 구간 (구르기 진행도 기준, 0~1)
+    [SerializeField, Range(0f, 1f)] private float iFrameStart = 0.05f;
+    [SerializeField, Range(0f, 1f)] private float iFrameEnd = 0.6f;
     [SerializeField] private int hp = 100;
     [SerializeField] private int maxHp = 100;
 
@@ -90,16 +97,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         }
 
         Vector2 moveInput = inputActions.Player.Move.ReadValue<Vector2>();
-        Vector3 camForward = mainCam.transform.forward;
-        Vector3 camRight = mainCam.transform.right;
-        camForward.y = 0f;
-        camRight.y = 0f;
-        camForward.Normalize();
-        camRight.Normalize();
-
-        Vector3 moveDir = camForward * moveInput.y + camRight * moveInput.x;
-        if (moveDir.sqrMagnitude > 1f)
-            moveDir.Normalize();
+        Vector3 moveDir = GetCameraRelativeDirection(moveInput);
 
         currentMoveDir = moveDir;
         animator.SetFloat("Speed", currentMoveDir.magnitude);
@@ -117,6 +115,22 @@ public class PlayerController : MonoBehaviour, IDamageable
             Move(Vector3.zero);
         else
             Move(moveDir);
+    }
+
+    // 입력(WASD)을 카메라 기준 월드 방향으로 변환
+    private Vector3 GetCameraRelativeDirection(Vector2 input)
+    {
+        Vector3 camForward = mainCam.transform.forward;
+        Vector3 camRight = mainCam.transform.right;
+        camForward.y = 0f;
+        camRight.y = 0f;
+        camForward.Normalize();
+        camRight.Normalize();
+
+        Vector3 dir = camForward * input.y + camRight * input.x;
+        if (dir.sqrMagnitude > 1f)
+            dir.Normalize();
+        return dir;
     }
 
     private void HandleGravity()
@@ -208,28 +222,66 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (isDodging || !canDodge || isAttacking || isParrying || IsHitStunned)
             return;
 
+        Vector2 moveInput = inputActions.Player.Move.ReadValue<Vector2>();
+        Vector2 localDir = GetDodgeLocalDirection(moveInput);
+
+        // 애니메이션과 실제 이동 방향이 일치하도록, 스냅된 로컬 방향을 월드로 다시 변환
+        dodgeDir = transform.TransformDirection(new Vector3(localDir.x, 0f, localDir.y));
+        dodgeDir.y = 0f;
+        dodgeDir.Normalize();
+
         isDodging = true;
         canDodge = false;
-        isInvincible = true;
-        dodgeTimer = dodgeDuration;
-        dodgeDir = -transform.forward;
+        isInvincible = false;   // 무적은 HandleDodge에서 iFrame 구간에만 켬
+        dodgeTimer = 0f;
+
+        animator.ResetTrigger("Attack");
+        animator.ResetTrigger("Parry");
+        animator.SetFloat("DodgeX", localDir.x);
+        animator.SetFloat("DodgeY", localDir.y);
         animator.SetTrigger("Dodge");
+    }
+
+    // 입력이 없으면 앞구르기, 있으면 캐릭터 기준 앞/뒤/좌/우 중 가장 가까운 방향
+    // 반환값: (x = 좌우 -1/0/1, y = 앞뒤 -1/0/1)
+    private Vector2 GetDodgeLocalDirection(Vector2 moveInput)
+    {
+        if (moveInput.sqrMagnitude < 0.01f)
+            return Vector2.up;
+
+        Vector3 worldDir = GetCameraRelativeDirection(moveInput);
+        Vector3 local = transform.InverseTransformDirection(worldDir);
+
+        if (Mathf.Abs(local.x) > Mathf.Abs(local.z))
+            return new Vector2(Mathf.Sign(local.x), 0f);
+
+        return new Vector2(0f, Mathf.Sign(local.z));
     }
 
     private void HandleDodge()
     {
-        dodgeTimer -= Time.deltaTime;
-        Vector3 motion = dodgeDir * dodgeSpeed;
+        dodgeTimer += Time.deltaTime;
+        float t = Mathf.Clamp01(dodgeTimer / dodgeDuration);
+
+        isInvincible = t >= iFrameStart && t <= iFrameEnd;
+
+        float speed = dodgeSpeed * dodgeSpeedCurve.Evaluate(t);
+        Vector3 motion = dodgeDir * speed;
         motion.y = verticalVelocity;
         controller.Move(motion * Time.deltaTime);
-        if (dodgeTimer <= 0f)
+
+        if (t >= 1f)
             EndDodge();
     }
 
     private void EndDodge()
     {
+        if (!isDodging)
+            return;
+
         isDodging = false;
         isInvincible = false;
+        CancelInvoke(nameof(ResetDodge));
         Invoke(nameof(ResetDodge), dodgeCooldown);
     }
 
@@ -265,6 +317,10 @@ public class PlayerController : MonoBehaviour, IDamageable
 
         if (isParrying)
             EndParry();
+
+        // 무적 구간 밖(구르기 끝자락)에 맞으면 구르기 취소
+        if (isDodging)
+            EndDodge();
 
         if (isAttacking)
         {
