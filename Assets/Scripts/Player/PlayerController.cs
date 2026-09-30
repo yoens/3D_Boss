@@ -8,6 +8,8 @@ public class PlayerController : MonoBehaviour, IDamageable
     private CharacterController controller;
     private PlayerInputActions inputActions;
     private Camera mainCam;
+    private CharacterSfx sfx;
+
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float gravity = -20f;
     [SerializeField] private LayerMask groundLayer;
@@ -27,17 +29,21 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     [Header("Dodge")]
     [SerializeField] private float dodgeSpeed = 10f;
-    [SerializeField, Min(0.05f)] private float dodgeDuration = 0.6f;   // 구르기 애니메이션 길이에 맞출 것
-    [SerializeField] private float dodgeCooldown = 0.5f;
-    // 구르기 진행도(0~1)에 따른 속도 배율: 초반엔 빠르고 끝에서 감속
-    [SerializeField] private AnimationCurve dodgeSpeedCurve = new AnimationCurve(
-        new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0.2f));
-    // 무적 구간 (구르기 진행도 기준, 0~1)
+    [SerializeField, Min(0.05f)] private float dodgeDuration = 0.6f;   
+    [SerializeField, Min(0f)] private float dodgeCooldown = 10f;
+
+    [SerializeField] private AnimationCurve dodgeSpeedCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(0.6f, 1f), new Keyframe(1f, 0.2f));
     [SerializeField, Range(0f, 1f)] private float iFrameStart = 0.05f;
     [SerializeField, Range(0f, 1f)] private float iFrameEnd = 0.6f;
     [SerializeField] private int hp = 100;
     [SerializeField] private int maxHp = 100;
 
+
+    private float nextDodgeTime;
+    private bool canDodge => Time.time >= nextDodgeTime;
+
+    public float DodgeCooldownRemaining => Mathf.Max(0f, nextDodgeTime - Time.time);
+    
     public int Hp => hp;
     public int MaxHp => maxHp;
     public event Action<int, int> OnHealthChanged;
@@ -46,7 +52,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private bool IsHitStunned => Time.time < hitLockUntil;
     private float nextAttackTime;
     private bool isDodging;
-    private bool canDodge = true;
+    
     private Vector3 dodgeDir;
     private float dodgeTimer;
     private bool isInvincible;
@@ -61,6 +67,8 @@ public class PlayerController : MonoBehaviour, IDamageable
         inputActions = new PlayerInputActions();
         animator = GetComponentInChildren<Animator>();
         mainCam = Camera.main;
+        sfx = GetComponentInChildren<CharacterSfx>();
+        
         hp = maxHp;
     }
 
@@ -117,7 +125,6 @@ public class PlayerController : MonoBehaviour, IDamageable
             Move(moveDir);
     }
 
-    // 입력(WASD)을 카메라 기준 월드 방향으로 변환
     private Vector3 GetCameraRelativeDirection(Vector2 input)
     {
         Vector3 camForward = mainCam.transform.forward;
@@ -179,6 +186,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         isAttacking = true;
         attackTargets.Clear();
         animator.SetTrigger("Attack");
+        sfx?.PlaySwing();
     }
 
     public void EndAttack()
@@ -225,14 +233,14 @@ public class PlayerController : MonoBehaviour, IDamageable
         Vector2 moveInput = inputActions.Player.Move.ReadValue<Vector2>();
         Vector2 localDir = GetDodgeLocalDirection(moveInput);
 
-        // 애니메이션과 실제 이동 방향이 일치하도록, 스냅된 로컬 방향을 월드로 다시 변환
+       
         dodgeDir = transform.TransformDirection(new Vector3(localDir.x, 0f, localDir.y));
         dodgeDir.y = 0f;
         dodgeDir.Normalize();
 
         isDodging = true;
-        canDodge = false;
-        isInvincible = false;   // 무적은 HandleDodge에서 iFrame 구간에만 켬
+    
+        isInvincible = false;  
         dodgeTimer = 0f;
 
         animator.ResetTrigger("Attack");
@@ -240,10 +248,10 @@ public class PlayerController : MonoBehaviour, IDamageable
         animator.SetFloat("DodgeX", localDir.x);
         animator.SetFloat("DodgeY", localDir.y);
         animator.SetTrigger("Dodge");
+        sfx?.PlayRoll();
     }
 
-    // 입력이 없으면 앞구르기, 있으면 캐릭터 기준 앞/뒤/좌/우 중 가장 가까운 방향
-    // 반환값: (x = 좌우 -1/0/1, y = 앞뒤 -1/0/1)
+  
     private Vector2 GetDodgeLocalDirection(Vector2 moveInput)
     {
         if (moveInput.sqrMagnitude < 0.01f)
@@ -276,18 +284,12 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void EndDodge()
     {
-        if (!isDodging)
+        if(!isDodging)
             return;
 
         isDodging = false;
         isInvincible = false;
-        CancelInvoke(nameof(ResetDodge));
-        Invoke(nameof(ResetDodge), dodgeCooldown);
-    }
-
-    private void ResetDodge()
-    {
-        canDodge = true;
+        nextDodgeTime = Time.time + dodgeCooldown;
     }
 
     public void TakeDamage(int amount, GameObject attacker)
@@ -304,6 +306,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (canBeParried && isParrying)
         {
             EndParry();
+            sfx?.PlayParry();
             if (attacker != null)
             {
                 EnemyController targetEnemy = attacker.GetComponentInParent<EnemyController>();
@@ -318,7 +321,6 @@ public class PlayerController : MonoBehaviour, IDamageable
         if (isParrying)
             EndParry();
 
-        // 무적 구간 밖(구르기 끝자락)에 맞으면 구르기 취소
         if (isDodging)
             EndDodge();
 
@@ -332,6 +334,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         animator.ResetTrigger("Parry");
         hitLockUntil = Time.time + hitLockDuration;
         hp = Mathf.Max(0, hp - amount);
+        sfx?.PlayHit();
         animator.SetTrigger("Hit");
         OnHealthChanged?.Invoke(hp, maxHp);
 

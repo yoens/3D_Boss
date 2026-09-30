@@ -13,6 +13,10 @@ public class EnemyController : MonoBehaviour, IDamageable
     private DeadState deadState;
     private HitState hitState;
     private SpecialAttackState specialAttackState;
+    private ChargeState chargeState;
+    private BossChargeAttack chargeAttack;
+    private EnemyHitFlash hitFlash;
+    private CharacterSfx sfx;
 
     [SerializeField] private Transform player;
 
@@ -66,6 +70,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     private Vector3 specialOrigin;
 
     private Animator animator;
+    
     private CharacterController controller;
 
     private float verticalVelocity;
@@ -86,6 +91,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     public float HitDuration => hitDuration;
     public float ChaseLoseRange => chaseLoseRange;
     public Animator Animator => animator;
+    public CharacterSfx Sfx => sfx;
     public int Hp => hp;
     public int MaxHp => maxHp;
 
@@ -95,8 +101,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     public HitState HitState => hitState;
     public DeadState DeadState => deadState;
 
-    public bool CanAttack =>
-        Time.time >= lastAttackTime + attackCooldown;
+    public bool CanAttack => Time.time >= lastAttackTime + attackCooldown;
 
     public event Action<int, int> OnHealthChanged;
 
@@ -104,6 +109,8 @@ public class EnemyController : MonoBehaviour, IDamageable
     {
         controller = GetComponent<CharacterController>();
         animator = GetComponentInChildren<Animator>();
+        hitFlash = GetComponent<EnemyHitFlash>();
+        chargeAttack = GetComponent<BossChargeAttack>();
 
         stateMachine = new StateMachine();
         navigationPath = new NavMeshPath();
@@ -114,7 +121,10 @@ public class EnemyController : MonoBehaviour, IDamageable
         hitState = new HitState(this, stateMachine);
         deadState = new DeadState(this, stateMachine);
         specialAttackState = new SpecialAttackState(this, stateMachine);
-
+        chargeState = new ChargeState(this, stateMachine, chargeAttack);
+        if (chargeAttack != null)
+            chargeAttack.Initialize(this, controller, navigationSurface, obstacleLayer);
+        sfx = GetComponentInChildren<CharacterSfx>();
         hp = maxHp;
     }
 
@@ -166,6 +176,13 @@ public class EnemyController : MonoBehaviour, IDamageable
         }
 
         verticalVelocity += gravity * Time.deltaTime;
+
+        if (stateMachine.CurrentState == chargeState &&
+            chargeAttack != null && chargeAttack.IsDashing)
+        {
+            chargeAttack.ApplyDashMovement(verticalVelocity, Time.deltaTime);
+            return;
+        }
 
         Vector3 motion = moveDirection * moveSpeed;
         motion.y = verticalVelocity;
@@ -489,6 +506,9 @@ public class EnemyController : MonoBehaviour, IDamageable
             return;
 
         hp = Mathf.Max(0, hp - damage);
+        sfx?.PlayHit();
+        if (isBoss && hitFlash != null)
+            hitFlash.Play();
         OnHealthChanged?.Invoke(hp, maxHp);
 
         if (hp <= 0)
@@ -500,7 +520,8 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         SetInCombat(true);
 
-        if (isBoss && (!stagger || stateMachine.CurrentState == specialAttackState))
+        if (isBoss && (!stagger || stateMachine.CurrentState == specialAttackState ||
+            stateMachine.CurrentState == chargeState))
         {
             if (stateMachine.CurrentState == idleState)
                 stateMachine.ChangeState(chaseState);
@@ -558,6 +579,8 @@ public class EnemyController : MonoBehaviour, IDamageable
     {
         SetInCombat(false);
         HideSpecialIndicator();
+        if (chargeAttack != null)
+            chargeAttack.Cancel();
     }
 
     private void UpdateBossPhase()
@@ -570,11 +593,22 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if (stateMachine.CurrentState == hitState ||
             stateMachine.CurrentState == specialAttackState ||
+            stateMachine.CurrentState == chargeState ||
             attackState.IsAttacking)
             return;
 
         phaseTwo = true;
         Debug.Log($"{name}: 보스 2페이즈 시작");
+    }
+
+    public bool TryStartChargeAttack()
+    {
+        if (stateMachine.CurrentState != chaseState || chargeAttack == null ||
+            !chargeAttack.CanStart())
+            return false;
+
+        stateMachine.ChangeState(chargeState);
+        return true;
     }
 
     public bool TryStartSpecialAttack()

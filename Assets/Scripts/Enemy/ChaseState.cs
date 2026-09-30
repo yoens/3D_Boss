@@ -26,6 +26,9 @@ public class ChaseState : IState
             return;
         }
 
+        if (enemy.TryStartChargeAttack())
+            return;
+
         if (enemy.TryStartSpecialAttack())
             return;
 
