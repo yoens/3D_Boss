@@ -9,6 +9,7 @@ public class PlayerController : MonoBehaviour, IDamageable
     private PlayerInputActions inputActions;
     private Camera mainCam;
     private CharacterSfx sfx;
+    private PlayerInventory inventory;
 
     [SerializeField] private float moveSpeed = 5f;
     [SerializeField] private float gravity = -20f;
@@ -38,6 +39,15 @@ public class PlayerController : MonoBehaviour, IDamageable
     [SerializeField] private int hp = 100;
     [SerializeField] private int maxHp = 100;
 
+    private bool IsInventoryInputBlocked => inventory != null && inventory.BlocksGameplayInput;
+
+    public bool CanUseInventory => GameManager.Instance != null &&
+        GameManager.Instance.CurrentState == GameState.Playing &&
+        hp > 0 &&
+        !isAttacking &&
+        !isDodging &&
+        !isParrying &&
+        !IsHitStunned;
 
     private float nextDodgeTime;
     private bool canDodge => Time.time >= nextDodgeTime;
@@ -68,7 +78,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         animator = GetComponentInChildren<Animator>();
         mainCam = Camera.main;
         sfx = GetComponentInChildren<CharacterSfx>();
-        
+        inventory = GetComponent<PlayerInventory>();
         hp = maxHp;
     }
 
@@ -99,6 +109,18 @@ public class PlayerController : MonoBehaviour, IDamageable
             animator.SetFloat("Speed", 0f);
             animator.SetFloat("MoveX", 0f);
             animator.SetFloat("MoveY", 0f);
+            HandleGravity();
+            Move(Vector3.zero);
+            return;
+        }
+
+        if (IsInventoryInputBlocked)
+        {
+            currentMoveDir = Vector3.zero;
+            animator.SetFloat("Speed", 0f);
+            animator.SetFloat("MoveX", 0f);
+            animator.SetFloat("MoveY", 0f);
+
             HandleGravity();
             Move(Vector3.zero);
             return;
@@ -177,6 +199,9 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void OnAttack(InputAction.CallbackContext context)
     {
+        if (IsInventoryInputBlocked)
+            return;
+
         if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
             return;
 
@@ -224,6 +249,9 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void OnDodge(InputAction.CallbackContext context)
     {
+        if (IsInventoryInputBlocked)
+            return;
+
         if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
             return;
 
@@ -333,6 +361,7 @@ public class PlayerController : MonoBehaviour, IDamageable
         animator.ResetTrigger("Attack");
         animator.ResetTrigger("Parry");
         hitLockUntil = Time.time + hitLockDuration;
+        inventory?.Close();
         hp = Mathf.Max(0, hp - amount);
         sfx?.PlayHit();
         animator.SetTrigger("Hit");
@@ -344,6 +373,9 @@ public class PlayerController : MonoBehaviour, IDamageable
 
     private void OnParry(InputAction.CallbackContext context)
     {
+        if (IsInventoryInputBlocked)
+            return;
+
         if (GameManager.Instance.CurrentState != GameState.Playing || hp <= 0)
             return;
 
@@ -369,5 +401,15 @@ public class PlayerController : MonoBehaviour, IDamageable
     private void ResetParry()
     {
         canParry = true;
+    }
+
+    public bool TryHeal(int amount)
+    {
+        if (!CanUseInventory || amount <= 0 || hp >= maxHp)
+            return false;
+
+        hp += Mathf.Min(amount, maxHp - hp);
+        OnHealthChanged?.Invoke(hp, maxHp);
+        return true;
     }
 }

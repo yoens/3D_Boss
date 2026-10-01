@@ -17,6 +17,7 @@ public class EnemyController : MonoBehaviour, IDamageable
     private BossChargeAttack chargeAttack;
     private EnemyHitFlash hitFlash;
     private CharacterSfx sfx;
+    private EnemyLootDrop lootDrop;
 
     [SerializeField] private Transform player;
 
@@ -125,6 +126,7 @@ public class EnemyController : MonoBehaviour, IDamageable
         if (chargeAttack != null)
             chargeAttack.Initialize(this, controller, navigationSurface, obstacleLayer);
         sfx = GetComponentInChildren<CharacterSfx>();
+        lootDrop = GetComponent<EnemyLootDrop>();
         hp = maxHp;
     }
 
@@ -513,6 +515,7 @@ public class EnemyController : MonoBehaviour, IDamageable
 
         if (hp <= 0)
         {
+            lootDrop?.Drop();
             SetInCombat(false);
             stateMachine.ChangeState(deadState);
             return;
