@@ -143,7 +143,7 @@ public class PlayerInventory : MonoBehaviour
             int before = player.Hp;
             if (!player.TryHeal(item.HealAmount))
             {
-                Notify("체력이 가득 차 있거나 지금은 사용할 수 없습니다.");
+                Notify("life is full or can't use now.");
                 return;
             }
 
@@ -152,7 +152,7 @@ public class PlayerInventory : MonoBehaviour
                 items[index] = null;
 
             OnChanged?.Invoke();
-            Notify($"{item.DisplayName} 사용 · HP +{player.Hp - before}");
+            Notify($"{item.DisplayName} USE · HP +{player.Hp - before}");
         }
         finally
         {

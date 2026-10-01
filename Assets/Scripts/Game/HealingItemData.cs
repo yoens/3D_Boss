@@ -3,7 +3,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Game/Items/Healing Item", fileName = "HealingPotion")]
 public class HealingItemData : ScriptableObject
 {
-    [SerializeField] private string displayName = "회복 물약";
+    [SerializeField] private string displayName = "HEALING POTION";
     [SerializeField] private Sprite icon;
     [SerializeField, Min(1)] private int healAmount = 30;
     [SerializeField, Min(1)] private int maxStack = 10;

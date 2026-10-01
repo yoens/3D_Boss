@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 419babbd7af5630879dde9a360a34848, type: 3}
   m_Name: HealingPotion
   m_EditorClassIdentifier: 
-  displayName: "\uD68C\uBCF5 \uBB3C\uC57D"
-  icon: {fileID: 21300000, guid: e52ea25af699fd445b7046374f81a5b9, type: 3}
+  displayName: HEALING POTION
+  icon: {fileID: 21300000, guid: 57baff2cd9abc5c44aae42470f7dff52, type: 3}
   healAmount: 30
   maxStack: 10

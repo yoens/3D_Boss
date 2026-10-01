@@ -36,7 +36,7 @@ public class InventorySlotUI : MonoBehaviour
 
         if (itemNameText != null)
             itemNameText.text = item != null ?
-                $"{item.DisplayName}\nHP +{item.HealAmount}" : "빈 슬롯";
+                $"{item.DisplayName}\nHP +{item.HealAmount}" : "Empty Slot";
 
         if (countText != null)
             countText.text = item != null ? $"x{inventory.GetCount(index)}" : "";

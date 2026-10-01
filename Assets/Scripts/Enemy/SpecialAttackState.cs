@@ -21,6 +21,7 @@ public class SpecialAttackState : IState
         recoveryTimer = 0f;
         hitProcessed = false;
         animationFinished = false;
+        enemy.Sfx?.PlaySpecialImpact();
         enemy.BeginSpecialAttack();
     }
 
@@ -55,6 +56,7 @@ public class SpecialAttackState : IState
 
         hitProcessed = true;
         recoveryTimer = 0f;
+        
         enemy.ApplySpecialAttackDamage();
     }
 

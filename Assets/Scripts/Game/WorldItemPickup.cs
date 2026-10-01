@@ -11,7 +11,7 @@ public class WorldItemPickup : MonoBehaviour
 
     public bool IsAvailable => isActiveAndEnabled && !collected && !collecting &&
         item != null && amount > 0;
-    public string Prompt => item != null ? $"[E] {item.DisplayName} x{amount} 줍기" : "";
+    public string Prompt => item != null ? $"[E] {item.DisplayName} x{amount} PICK" : "";
 
     private void Reset()
     {
@@ -27,12 +27,12 @@ public class WorldItemPickup : MonoBehaviour
         if (!inventory.TryAdd(item, amount))
         {
             collecting = false;
-            inventory.Notify("인벤토리 공간이 부족합니다.");
+            inventory.Notify("INVENTORY is full.");
             return false;
         }
 
         collected = true;
-        inventory.Notify($"{item.DisplayName} x{amount} 획득");
+        inventory.Notify($"{item.DisplayName} x{amount} TAKE");
         gameObject.SetActive(false);
         Destroy(gameObject);
         return true;
