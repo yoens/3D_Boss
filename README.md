@@ -118,6 +118,24 @@ Unity로 개발 중인 개인 3D 액션 게임입니다.
 
 아이템의 설정값은 데이터 에셋으로 관리하고, 월드 외형과 인벤토리 표시를 분리했습니다. 물약 모델이나 아이콘을 교체할 때 획득·회복 로직을 수정하지 않아도 됩니다.
 
+## 인게임 플레이
+
+### 필드 탐험
+![필드 탐험](./screenshots/droppotion.png)
+
+### 보스 전투
+![보스 전투](./screenshots/bossattack.png)
+
+### 범위 특수 공격
+![범위 특수 공격](./screenshots/boss_warning_yellow.png)
+![범위 특수 공격](./screenshots/boss_warning_red.png)
+![범위 특수 공격](./screenshots/boss_warning_yellow_2.png)
+![범위 특수 공격](./screenshots/boss_warning_red_2.png)
+
+### 인벤토리
+![인벤토리](./screenshots/inventory.png)
+![인벤토리](./screenshots/inventory2.png)
+
 ## 현재 범위와 향후 계획
 
 - [ ] 포탈을 통한 다른 맵 이동
